@@ -71,7 +71,7 @@ public class SpatialTreeIndex extends BaseIndex implements SpatialIndex {
         if (closed) {
             throw DbException.throwInternalError();
         }
-        root.insert(getEnvelope(row), row);
+        root.insert(getEnvelope(row), row.getKey());
         rowCount++;
     }
     
@@ -86,7 +86,7 @@ public class SpatialTreeIndex extends BaseIndex implements SpatialIndex {
         if (closed) {
             throw DbException.throwInternalError();
         }
-        if (!root.remove(getEnvelope(row), row)) {
+        if (!root.remove(getEnvelope(row), row.getKey())) {
             throw DbException.throwInternalError("row not found");
         }
         rowCount--;
@@ -94,22 +94,22 @@ public class SpatialTreeIndex extends BaseIndex implements SpatialIndex {
 
     @Override
     public Cursor find(TableFilter filter, SearchRow first, SearchRow last) {
-        return find();
+        return find(filter.getSession());
     }
 
     @Override
     public Cursor find(Session session, SearchRow first, SearchRow last) {
-        return find();
+        return find(session);
     }
 
     @SuppressWarnings("unchecked")
-    private Cursor find() {
+    private Cursor find(Session session) {
         // FIXME: ideally I need external iterators, but let's see if we can get
         // it working first
         // FIXME: in the context of a spatial index, a query that uses ">" or "<" has no real meaning, so for now just ignore
         // it and return all rows
-        java.util.List<Row> list = root.queryAll();
-        return new ListCursor(list, true/*first*/);
+        java.util.List<Long> list = root.queryAll();
+        return new ListCursor(list, true/*first*/,tableData,session);
     }
     
     @SuppressWarnings("unchecked")
@@ -117,13 +117,13 @@ public class SpatialTreeIndex extends BaseIndex implements SpatialIndex {
     public Cursor findByGeometry(TableFilter filter, SearchRow intersection) {
         // FIXME: ideally I need external iterators, but let's see if we can get
         // it working first
-        java.util.List<Row> list;
+        java.util.List<Long> list;
         if (intersection != null) {
             list = root.query(getEnvelope(intersection));
         } else {
             list = root.queryAll();
         }
-        return new ListCursor(list, true/*first*/);
+        return new ListCursor(list, true/*first*/, tableData, filter.getSession());
     }
 
     @Override
@@ -166,9 +166,9 @@ public class SpatialTreeIndex extends BaseIndex implements SpatialIndex {
         // FIXME: ideally I need external iterators, but let's see if we can get
         // it working first
         @SuppressWarnings("unchecked")
-        List<Row> list = root.queryAll();
+        List<Long> list = root.queryAll();
         
-        return new ListCursor(list, first);
+        return new ListCursor(list, first,tableData,session);
     }
 
     @Override
@@ -187,13 +187,17 @@ public class SpatialTreeIndex extends BaseIndex implements SpatialIndex {
     }
 
     private static final class ListCursor implements Cursor {
-        private final List<Row> rows;
+        private final List<Long> rows;
         private int index;
         private Row current;
+        private final RegularTable tableData;
+        private Session session;
 
-        public ListCursor(List<Row> rows, boolean first) {
+        public ListCursor(List<Long> rows, boolean first, RegularTable tableData, Session session) {
             this.rows = rows;
             this.index = first ? 0 : rows.size();
+            this.tableData = tableData;
+            this.session = session;
         }
 
         @Override
@@ -208,13 +212,13 @@ public class SpatialTreeIndex extends BaseIndex implements SpatialIndex {
 
         @Override
         public boolean next() {
-            current = index >= rows.size() ? null : rows.get(index++);
+            current = index >= rows.size() ? null : tableData.getRow(session,rows.get(index++));
             return current != null;
         }
 
         @Override
         public boolean previous() {
-            current = index < 0 ? null : rows.get(index--);
+            current = index < 0 ? null : tableData.getRow(session,rows.get(index--));
             return current != null;
         }
 

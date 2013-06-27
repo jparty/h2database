@@ -73,18 +73,18 @@ public class TestSpatial extends TestBase {
         stat.execute("insert into test values(1, 'POLYGON ((1 1, 1 2, 2 2, 1 1))')");
         ResultSet rs = stat.executeQuery("explain select * from test where poly && 'POLYGON ((1 1, 1 2, 2 2, 1 1))'::Geometry");
         rs.next();
-        System.out.print(rs.getString(1));
         assertContains(rs.getString(1), "/* PUBLIC.IDX_TEST_POLY: POLY &&");
-         /*
+
         
         // these queries actually have no meaning in the context of a spatial index, but 
         // check them anyhow
-        stat.executeQuery("select * from test where poly = 'POLYGON ((1 1, 1 2, 2 2, 1 1))'");
-        stat.executeQuery("select * from test where poly > 'POLYGON ((1 1, 1 2, 2 2, 1 1))'");
-        stat.executeQuery("select * from test where poly < 'POLYGON ((1 1, 1 2, 2 2, 1 1))'");
-        */
+        stat.executeQuery("select * from test where poly = 'POLYGON ((1 1, 1 2, 2 2, 1 1))'::Geometry");
+        stat.executeQuery("select * from test where poly > 'POLYGON ((1 1, 1 2, 2 2, 1 1))'::Geometry");
+        stat.executeQuery("select * from test where poly < 'POLYGON ((1 1, 1 2, 2 2, 1 1))'::Geometry");
+
         rs = stat.executeQuery("select * from test where poly && 'POLYGON ((1 1, 1 2, 2 2, 1 1))'::Geometry");
         assertTrue(rs.next());
+        assertEquals("POLYGON ((1 1, 1 2, 2 2, 1 1))",rs.getString("poly"));
         /*
         rs = stat.executeQuery("select * from test where intersects(poly, 'POINT (1 1)')");
         assertTrue(rs.next());
