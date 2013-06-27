@@ -58,9 +58,9 @@ public class IndexCondition {
     public static final int ALWAYS_FALSE = 8;
 
     /**
-     * A bit of a search mask meaning 'spatial intersection'.
+     * A bit of a search mask meaning 'overlap'. {@link Comparison#OVERLAP}
      */
-    public static final int SPATIAL_INTERSECTS = 16;
+    public static final int OVERLAP = 16;
     
     private final Column column;
     /**
@@ -210,6 +210,9 @@ public class IndexCondition {
             buff.append(expressionQuery.getPlanSQL());
             buff.append(')');
             break;
+        case Comparison.OVERLAP:
+            buff.append(" && ");
+            break;
         default:
             DbException.throwInternalError("type="+compareType);
         }
@@ -254,8 +257,8 @@ public class IndexCondition {
         case Comparison.SMALLER_EQUAL:
         case Comparison.SMALLER:
             return END;
-        case Comparison.SPATIAL_INTERSECTS:
-            return SPATIAL_INTERSECTS;
+        case Comparison.OVERLAP:
+            return OVERLAP;
         default:
             throw DbException.throwInternalError("type=" + compareType);
         }
@@ -313,7 +316,7 @@ public class IndexCondition {
      */
     public boolean isSpatialIntersects() {
         switch (compareType) {
-        case Comparison.SPATIAL_INTERSECTS:
+        case Comparison.OVERLAP:
             return true;
         default:
             return false;

@@ -101,9 +101,11 @@ public class Comparison extends Condition {
     public static final int IN_QUERY = 10;
 
     /**
-     * This is a pseudo comparison type that is only used for spatial index conditions.
+     * Operator &&
+     * This operator tells if two sides have elements in common.
      */
-    public static final int SPATIAL_INTERSECTS = 11;
+    public static final int OVERLAP = 11;
+
     
     private final Database database;
     private int compareType;
@@ -126,9 +128,6 @@ public class Comparison extends Condition {
             break;
         case IS_NOT_NULL:
             sql = left.getSQL() + " IS NOT NULL";
-            break;
-        case SPATIAL_INTERSECTS:
-            sql = "INTERSECTS(" + left.getSQL() + ", " + right.getSQL() + ")";
             break;
         default:
             sql = left.getSQL() + " " + getCompareOperator(compareType) + " " + right.getSQL();
@@ -160,6 +159,8 @@ public class Comparison extends Condition {
             return "<>";
         case NOT_EQUAL_NULL_SAFE:
             return "IS NOT";
+        case OVERLAP:
+            return "&&";
         default:
             throw DbException.throwInternalError("compareType=" + compareType);
         }
@@ -281,10 +282,10 @@ public class Comparison extends Condition {
         case SMALLER:
             result = database.compare(l, r) < 0;
             break;
-        case SPATIAL_INTERSECTS: {
+        case OVERLAP: {
             ValueGeometry lg = (ValueGeometry) l.convertTo(Value.GEOMETRY);
             ValueGeometry rg = (ValueGeometry) r.convertTo(Value.GEOMETRY);
-            result = lg.intersects(rg);
+            result = lg.boundingBoxIntersects(rg);
             break;
         }
         default:
@@ -407,7 +408,7 @@ public class Comparison extends Condition {
         case BIGGER_EQUAL:
         case SMALLER_EQUAL:
         case SMALLER:
-        case SPATIAL_INTERSECTS:
+        case OVERLAP:
             addIndex = true;
             break;
         default:

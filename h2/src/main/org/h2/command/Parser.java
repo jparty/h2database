@@ -160,7 +160,7 @@ public class Parser {
     private static final int SMALLER = 9, SMALLER_EQUAL = 10, NOT_EQUAL = 11, AT = 12;
     private static final int MINUS = 13, PLUS = 14, STRING_CONCAT = 15;
     private static final int OPEN = 16, CLOSE = 17, NULL = 18, TRUE = 19, FALSE = 20;
-    private static final int CURRENT_TIMESTAMP = 21, CURRENT_DATE = 22, CURRENT_TIME = 23, ROWNUM = 24;
+    private static final int CURRENT_TIMESTAMP = 21, CURRENT_DATE = 22, CURRENT_TIME = 23, ROWNUM = 24, OVERLAP = 25;
 
     private final Database database;
     private final Session session;
@@ -1889,14 +1889,6 @@ public class Parser {
             read(")");
             return new ConditionExists(query);
         }
-        if (readIf("INTERSECTS")) {
-            read("(");
-            Expression r1 = readConcat();
-            read(",");
-            Expression r2 = readConcat();
-            read(")");
-            return new Comparison(session, Comparison.SPATIAL_INTERSECTS, r1, r2);
-        }
         Expression r = readConcat();
         while (true) {
             // special case: NOT NULL is not part of an expression (as in CREATE
@@ -3252,6 +3244,7 @@ public class Parser {
             case '|':
             case '=':
             case ':':
+            case '&':
             case '~':
                 type = CHAR_SPECIAL_2;
                 break;
@@ -3419,6 +3412,11 @@ public class Parser {
             case '|':
                 if ("||".equals(s)) {
                     return STRING_CONCAT;
+                }
+                break;
+            case '&':
+                if ("&&".equals(s)) {
+                    return OVERLAP;
                 }
                 break;
             }
@@ -5449,6 +5447,8 @@ public class Parser {
             return Comparison.SMALLER_EQUAL;
         case NOT_EQUAL:
             return Comparison.NOT_EQUAL;
+        case OVERLAP:
+            return Comparison.OVERLAP;
         default:
             return -1;
         }

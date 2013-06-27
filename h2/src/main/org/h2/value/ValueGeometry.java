@@ -49,7 +49,7 @@ public class ValueGeometry extends Value {
     public static ValueGeometry get(String s) {
         return (ValueGeometry) Value.cache(new ValueGeometry(fromWKT(s)));
     }
-    
+
     /**
      * Get or create a geometry value for the given geometry.
      *
@@ -63,9 +63,15 @@ public class ValueGeometry extends Value {
     public Geometry getGeometry() {
         return geometry;
     }
-    
-    public boolean intersects(ValueGeometry r) {
-        return geometry.intersects(r.getGeometry());
+
+    /**
+     * Test if this {@link Geometry} envelope intersects with the other Geometry envelope.
+     * @param r Other geometry
+     * @return True if the two envelopes overlaps
+     */
+    public boolean boundingBoxIntersects(ValueGeometry r) {
+        // It is useless to cache the envelope as the Geometry object do this already
+        return geometry.getEnvelopeInternal().intersects(r.getGeometry().getEnvelopeInternal());
     }
     
     public Value intersection(ValueGeometry r) {
