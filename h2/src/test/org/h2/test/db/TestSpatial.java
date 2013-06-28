@@ -86,13 +86,13 @@ public class TestSpatial extends TestBase {
         rs = stat.executeQuery("select * from test where poly && 'POLYGON ((1 1, 1 2, 2 2, 1 1))'::Geometry");
         assertTrue(rs.next());
         assertEquals("POLYGON ((1 1, 1 2, 2 2, 1 1))",rs.getString("poly"));
-        /*
-        rs = stat.executeQuery("select * from test where intersects(poly, 'POINT (1 1)')");
+
+        rs = stat.executeQuery("select * from test where poly && 'POINT (1 1)'::Geometry");
         assertTrue(rs.next());
         
-        rs = stat.executeQuery("select * from test where intersects(poly, 'POINT (0 0)')");
+        rs = stat.executeQuery("select * from test where poly && 'POINT (0 0)'::Geometry");
         assertFalse(rs.next());
-        */
+
         stat.execute("drop table test");
         conn.close();
         deleteDb("spatialIndex");

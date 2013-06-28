@@ -6,11 +6,14 @@
 package org.h2.index;
 
 import java.util.List;
+
+import org.h2.engine.Constants;
 import org.h2.engine.Session;
 import org.h2.message.DbException;
 import org.h2.result.Row;
 import org.h2.result.SearchRow;
 import org.h2.result.SortOrder;
+import org.h2.table.Column;
 import org.h2.table.IndexColumn;
 import org.h2.table.RegularTable;
 import org.h2.table.TableFilter;
@@ -127,6 +130,24 @@ public class SpatialTreeIndex extends BaseIndex implements SpatialIndex {
     }
 
     @Override
+    protected long getCostRangeIndex(int[] masks, long rowCount, SortOrder sortOrder) {
+        rowCount += Constants.COST_ROW_OFFSET;
+        long cost = rowCount;
+        long rows = rowCount;
+        if (masks == null) {
+            return cost;
+        }
+        for (Column column : columns) {
+            int index = column.getColumnId();
+            int mask = masks[index];
+            if ((mask & IndexCondition.OVERLAP) == IndexCondition.OVERLAP) {
+                cost = 3 + rows / 4;
+            }
+        }
+        return cost;
+    }
+
+    @Override
     public double getCost(Session session, int[] masks, SortOrder sortOrder) {
         return getCostRangeIndex(masks, tableData.getRowCountApproximation(), sortOrder);
     }
@@ -212,13 +233,13 @@ public class SpatialTreeIndex extends BaseIndex implements SpatialIndex {
 
         @Override
         public boolean next() {
-            current = index >= rows.size() ? null : tableData.getRow(session,rows.get(index++));
+            current = index >= rows.size() ? null : tableData.getRow(session, rows.get(index++));
             return current != null;
         }
 
         @Override
         public boolean previous() {
-            current = index < 0 ? null : tableData.getRow(session,rows.get(index--));
+            current = index < 0 ? null : tableData.getRow(session, rows.get(index--));
             return current != null;
         }
 
