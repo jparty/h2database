@@ -10,6 +10,9 @@ import java.util.List;
 import org.h2.engine.Constants;
 import org.h2.engine.Session;
 import org.h2.message.DbException;
+import org.h2.mvstore.MVStore;
+import org.h2.mvstore.rtree.MVRTreeMap;
+import org.h2.mvstore.rtree.SpatialKey;
 import org.h2.result.Row;
 import org.h2.result.SearchRow;
 import org.h2.result.SortOrder;
@@ -21,14 +24,14 @@ import org.h2.value.Value;
 import org.h2.value.ValueGeometry;
 import com.vividsolutions.jts.geom.Envelope;
 import com.vividsolutions.jts.geom.Geometry;
-import com.vividsolutions.jts.index.quadtree.Quadtree;
 
 /**
  * This is an in-memory index based on a R-Tree.
  */
 public class SpatialTreeIndex extends BaseIndex implements SpatialIndex {
 
-    private Quadtree root;
+    private MVRTreeMap<Long> treeMap;
+    private MVStore store;
 
     private final RegularTable tableData;
     private long rowCount;
@@ -59,13 +62,14 @@ public class SpatialTreeIndex extends BaseIndex implements SpatialIndex {
                         + columns[0].column.getCreateSQL());
             }
         }
-
-        root = new Quadtree();
+        store = MVStore.open(null);
+        treeMap =  store.openMap("spatialIndex",
+                new MVRTreeMap.Builder<Long>());
     }
 
     @Override
     public void close(Session session) {
-        root = null;
+        store.close();
         closed = true;
     }
 
@@ -74,14 +78,27 @@ public class SpatialTreeIndex extends BaseIndex implements SpatialIndex {
         if (closed) {
             throw DbException.throwInternalError();
         }
-        root.insert(getEnvelope(row), row.getKey());
+        treeMap.add(getEnvelope(row),row.getKey());
         rowCount++;
     }
     
-    private Envelope getEnvelope(SearchRow row) {
+    private SpatialKey getEnvelope(SearchRow row) {
         Value v = row.getValue(columnIds[0]);
         Geometry g = ((ValueGeometry) v).getGeometry();
-        return g.getEnvelopeInternal();
+        Envelope env = g.getEnvelopeInternal();
+        return new SpatialKey(row.getKey(),castDouble(env.getMinX(),false),castDouble(env.getMaxX(),true),
+                castDouble(env.getMinY(),false),castDouble(env.getMaxY(),true));
+    }
+
+    /**
+     * Cast the provided value to float and set an offset equal to the approximation error.
+     * @param value
+     * @param upperPrecision If true the offset is added to the value, else it is removed to the value.
+     * @return Casted value
+     */
+    private static float castDouble(double value, boolean upperPrecision) {
+        double epsilon = Math.abs (value)-Math.abs((float)value);
+        return (float)(value+(upperPrecision ? epsilon : -epsilon));
     }
 
     @Override
@@ -89,7 +106,7 @@ public class SpatialTreeIndex extends BaseIndex implements SpatialIndex {
         if (closed) {
             throw DbException.throwInternalError();
         }
-        if (!root.remove(getEnvelope(row), row.getKey())) {
+        if (!treeMap.remove(getEnvelope(row),row.getKey())) {
             throw DbException.throwInternalError("row not found");
         }
         rowCount--;
@@ -105,14 +122,8 @@ public class SpatialTreeIndex extends BaseIndex implements SpatialIndex {
         return find(session);
     }
 
-    @SuppressWarnings("unchecked")
     private Cursor find(Session session) {
-        // FIXME: ideally I need external iterators, but let's see if we can get
-        // it working first
-        // FIXME: in the context of a spatial index, a query that uses ">" or "<" has no real meaning, so for now just ignore
-        // it and return all rows
-        java.util.List<Long> list = root.queryAll();
-        return new ListCursor(list, true/*first*/,tableData,session);
+        return new ListCursor(treeMap.keyIterator(), true/*first*/,tableData,session);
     }
     
     @SuppressWarnings("unchecked")
