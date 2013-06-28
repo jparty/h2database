@@ -89,7 +89,7 @@ public class ValueGeometry extends Value {
 
     @Override
     public String getSQL() {
-        return "'" + toWKT() + "'";
+        return "'" + toWKT() + "'::Geometry";
     }
 
     @Override
