@@ -6,18 +6,25 @@
 package org.h2.test.db;
 
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.Random;
+
+import com.vividsolutions.jts.geom.Envelope;
+import com.vividsolutions.jts.geom.Geometry;
 import org.h2.test.TestBase;
 import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.GeometryFactory;
 import com.vividsolutions.jts.geom.Polygon;
+import org.h2.value.ValueGeometry;
 
 /**
  * Spatial datatype and index tests.
  */
 public class TestSpatial extends TestBase {
+    private static final Random geometryRand = new Random(478745);
 
     /**
      * Run just this test.
@@ -62,6 +69,30 @@ public class TestSpatial extends TestBase {
         deleteDb("spatial");
     }
 
+    /**
+     * Generate a random linestring under the given bounding box
+     * @param minX Bounding box min x
+     * @param maxX Bounding box max x
+     * @param minY Bounding box min y
+     * @param maxY Bounding box max y
+     * @param maxLength LineString maximum length
+     * @return A segment within this bounding box
+     */
+    public static Geometry getRandomGeometry(double minX,double maxX,double minY, double maxY, double maxLength) {
+        GeometryFactory factory = new GeometryFactory();
+        // Create the start point
+        Coordinate start = new Coordinate(geometryRand.nextDouble()*(maxX-minX)+minX,
+                geometryRand.nextDouble()*(maxY-minY)+minY);
+        // Compute an angle
+        double angle = geometryRand.nextDouble() * Math.PI * 2;
+        // Compute length
+        double length = geometryRand.nextDouble() * maxLength;
+        // Compute end point
+        Coordinate end = new Coordinate(start.x + Math.cos(angle) * length, start.y + Math.sin(angle) * length);
+        return factory.createLineString(new Coordinate[]{start,end});
+    }
+
+
     /** test in the in-memory spatial index */
     private void testMemorySpatialIndex() throws SQLException {
         deleteDb("spatialIndex");
@@ -94,7 +125,43 @@ public class TestSpatial extends TestBase {
         assertFalse(rs.next());
 
         stat.execute("drop table test");
+
+
+        // Generate a set of geometry
+        // It is marked as random, but it generate always the same geometry set, given the same seed
+        stat.execute("create memory table test(id long primary key auto_increment, poly geometry)");
+        // Create segment generation bounding box
+        Envelope bbox = ValueGeometry.get("POLYGON ((301804.1049793153 2251719.1222191923," +
+                " 301804.1049793153 2254747.2888244865, 304646.87362918374 2254747.2888244865," +
+                " 304646.87362918374 2251719.1222191923, 301804.1049793153 2251719.1222191923))")
+                .getGeometry().getEnvelopeInternal();
+        // Create overlap test bounding box
+        String testBBoxString = "POLYGON ((302215.44416332216 2252748, 302215.44416332216 2253851.781225762," +
+                " 303582.85796541866 2253851.781225762, 303582.85796541866 2252748.526908161," +
+                " 302215.44416332216 2252748))";
+        Envelope testBBox = ValueGeometry.get(testBBoxString).getGeometry().getEnvelopeInternal();
+
+        PreparedStatement ps = conn.prepareStatement("insert into test(poly) values (?)");
+        long overlapCount = 0;
+        for(int i=0;i<300;i++) {
+            Geometry geometry = getRandomGeometry(bbox.getMinX(),bbox.getMaxX(),bbox.getMinY(),bbox.getMaxY(),200);
+            if(geometry.getEnvelopeInternal().intersects(testBBox)) {
+                overlapCount++;
+            }
+            ps.setObject(1,geometry);
+            ps.execute();
+        }
+        ps.close();
+        // Create index
+        stat.execute("create spatial index idx_test_poly on test(poly)");
+        // Must find the same overlap count with index
+        ps = conn.prepareStatement("select count(*) cpt from test where poly && ?::Geometry");
+        ps.setString(1,testBBoxString);
+        rs = ps.executeQuery();
+        assertTrue(rs.next());
+        assertEquals(overlapCount,rs.getInt("cpt"));
         conn.close();
+        System.out.println(overlapCount);
         deleteDb("spatialIndex");
     }
 
