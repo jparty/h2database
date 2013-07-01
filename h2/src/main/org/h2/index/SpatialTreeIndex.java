@@ -5,8 +5,7 @@
  */
 package org.h2.index;
 
-import java.util.List;
-
+import java.util.Iterator;
 import org.h2.engine.Constants;
 import org.h2.engine.Session;
 import org.h2.message.DbException;
@@ -86,13 +85,13 @@ public class SpatialTreeIndex extends BaseIndex implements SpatialIndex {
         Value v = row.getValue(columnIds[0]);
         Geometry g = ((ValueGeometry) v).getGeometry();
         Envelope env = g.getEnvelopeInternal();
-        return new SpatialKey(row.getKey(),castDouble(env.getMinX(),false),castDouble(env.getMaxX(),true),
+        return new SpatialKey(row.getKey(),castDouble(env.getMinX(), false),castDouble(env.getMaxX(),true),
                 castDouble(env.getMinY(),false),castDouble(env.getMaxY(),true));
     }
 
     /**
      * Cast the provided value to float and set an offset equal to the approximation error.
-     * @param value
+     * @param value The double value to cast into float
      * @param upperPrecision If true the offset is added to the value, else it is removed to the value.
      * @return Casted value
      */
@@ -123,21 +122,16 @@ public class SpatialTreeIndex extends BaseIndex implements SpatialIndex {
     }
 
     private Cursor find(Session session) {
-        return new ListCursor(treeMap.keyIterator(), true/*first*/,tableData,session);
+        return new ListCursor(treeMap.keySet().iterator(), tableData,session);
     }
     
     @SuppressWarnings("unchecked")
     @Override
     public Cursor findByGeometry(TableFilter filter, SearchRow intersection) {
-        // FIXME: ideally I need external iterators, but let's see if we can get
-        // it working first
-        java.util.List<Long> list;
-        if (intersection != null) {
-            list = root.query(getEnvelope(intersection));
-        } else {
-            list = root.queryAll();
+        if(intersection==null) {
+            return find(filter.getSession());
         }
-        return new ListCursor(list, true/*first*/, tableData, filter.getSession());
+        return new ListCursor(treeMap.findIntersectingKeys(getEnvelope(intersection)), tableData, filter.getSession());
     }
 
     @Override
@@ -170,8 +164,8 @@ public class SpatialTreeIndex extends BaseIndex implements SpatialIndex {
 
     @Override
     public void truncate(Session session) {
-        root = null;
         rowCount = 0;
+        treeMap.clear();
     }
 
     @Override
@@ -194,13 +188,10 @@ public class SpatialTreeIndex extends BaseIndex implements SpatialIndex {
         if (closed) {
             throw DbException.throwInternalError();
         }
-
-        // FIXME: ideally I need external iterators, but let's see if we can get
-        // it working first
-        @SuppressWarnings("unchecked")
-        List<Long> list = root.queryAll();
-        
-        return new ListCursor(list, first,tableData,session);
+        if(!first) {
+            throw DbException.throwInternalError("Spatial Index can only be fetch by ascending order");
+        }
+        return find(session);
     }
 
     @Override
@@ -215,43 +206,44 @@ public class SpatialTreeIndex extends BaseIndex implements SpatialIndex {
 
     @Override
     public long getDiskSpaceUsed() {
+        // TODO estimate disk space usage
         return 0;
     }
 
     private static final class ListCursor implements Cursor {
-        private final List<Long> rows;
-        private int index;
-        private Row current;
+        private final Iterator<SpatialKey> it;
+        private SpatialKey current;
         private final RegularTable tableData;
         private Session session;
 
-        public ListCursor(List<Long> rows, boolean first, RegularTable tableData, Session session) {
-            this.rows = rows;
-            this.index = first ? 0 : rows.size();
+        public ListCursor(Iterator<SpatialKey> it, RegularTable tableData, Session session) {
+            this.it = it;
             this.tableData = tableData;
             this.session = session;
         }
 
         @Override
         public Row get() {
-            return current;
+            return tableData.getRow(session,current.getId());
         }
 
         @Override
         public SearchRow getSearchRow() {
-            return current;
+            return get();
         }
 
         @Override
         public boolean next() {
-            current = index >= rows.size() ? null : tableData.getRow(session, rows.get(index++));
-            return current != null;
+            if(!it.hasNext()) {
+                return false;
+            }
+            current = it.next();
+            return true;
         }
 
         @Override
         public boolean previous() {
-            current = index < 0 ? null : tableData.getRow(session, rows.get(index--));
-            return current != null;
+            return false;
         }
 
     }
