@@ -85,19 +85,8 @@ public class SpatialTreeIndex extends BaseIndex implements SpatialIndex {
         Value v = row.getValue(columnIds[0]);
         Geometry g = ((ValueGeometry) v).getGeometry();
         Envelope env = g.getEnvelopeInternal();
-        return new SpatialKey(row.getKey(),castDouble(env.getMinX(), false),castDouble(env.getMaxX(),true),
-                castDouble(env.getMinY(),false),castDouble(env.getMaxY(),true));
-    }
-
-    /**
-     * Cast the provided value to float and set an offset equal to the approximation error.
-     * @param value The double value to cast into float
-     * @param upperPrecision If true the offset is added to the value, else it is removed to the value.
-     * @return Casted value
-     */
-    private static float castDouble(double value, boolean upperPrecision) {
-        double epsilon = Math.abs (value)-Math.abs((float)value);
-        return (float)(value+(upperPrecision ? epsilon : -epsilon));
+        return new SpatialKey(row.getKey(),(float)env.getMinX(),(float)env.getMaxX(),
+                (float)env.getMinY(),(float)env.getMaxY());
     }
 
     @Override
