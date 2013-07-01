@@ -9,8 +9,6 @@ package org.h2.value;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import org.h2.message.DbException;
-import org.h2.util.StringUtils;
-
 import com.vividsolutions.jts.geom.Geometry;
 import com.vividsolutions.jts.io.ParseException;
 import com.vividsolutions.jts.io.WKBReader;
@@ -51,7 +49,7 @@ public class ValueGeometry extends Value {
     public static ValueGeometry get(String s) {
         return (ValueGeometry) Value.cache(new ValueGeometry(fromWKT(s)));
     }
-
+    
     /**
      * Get or create a geometry value for the given geometry.
      *
@@ -61,41 +59,29 @@ public class ValueGeometry extends Value {
     public static ValueGeometry get(byte[] bytes) {
         return (ValueGeometry) Value.cache(new ValueGeometry(fromWKB(bytes)));
     }
-
+    
     public Geometry getGeometry() {
         return geometry;
     }
 
     /**
-     * Check whether two values intersect.
-     *
-     * @param r the second value
-     * @return true if they intersect
+     * Test if this {@link Geometry} envelope intersects with the other Geometry envelope.
+     * @param r Other geometry
+     * @return True if the two envelopes overlaps
      */
-    public boolean intersects(ValueGeometry r) {
-        return geometry.intersects(r.getGeometry());
+    public boolean boundingBoxIntersects(ValueGeometry r) {
+        // It is useless to cache the envelope as the Geometry object do this already
+        return geometry.getEnvelopeInternal().intersects(r.getGeometry().getEnvelopeInternal());
     }
-
-    /**
-     * Get the intersection of two values.
-     *
-     * @param r the second value
-     * @return the intersection
-     */
+    
     public Value intersection(ValueGeometry r) {
-        return get(geometry.intersection(r.geometry));
+        return get(this.geometry.intersection(r.geometry));
     }
-
-    /**
-     * Get the union of two values.
-     *
-     * @param r the second value
-     * @return the union
-     */
+    
     public Value union(ValueGeometry r) {
-        return get(geometry.union(r.geometry));
+        return get(this.geometry.union(r.geometry));
     }
-
+    
     @Override
     public int getType() {
         return Value.GEOMETRY;
@@ -103,13 +89,13 @@ public class ValueGeometry extends Value {
 
     @Override
     public String getSQL() {
-        return StringUtils.quoteStringSQL(toWKT());
+        return "'" + toWKT() + "'::Geometry";
     }
 
     @Override
     protected int compareSecure(Value v, CompareMode mode) {
         Geometry g = ((ValueGeometry) v).geometry;
-        return geometry.compareTo(g);
+        return this.geometry.compareTo(g);
     }
 
     @Override
@@ -124,7 +110,7 @@ public class ValueGeometry extends Value {
 
     @Override
     public int hashCode() {
-        return geometry.hashCode();
+        return this.geometry.hashCode();
     }
 
     @Override
@@ -136,7 +122,7 @@ public class ValueGeometry extends Value {
     public byte[] getBytes() {
         return toWKB();
     }
-
+    
     @Override
     public void set(PreparedStatement prep, int parameterIndex) throws SQLException {
         prep.setObject(parameterIndex, geometry);
@@ -156,32 +142,25 @@ public class ValueGeometry extends Value {
     public boolean equals(Object other) {
         return other instanceof ValueGeometry && geometry.equals(((ValueGeometry) other).geometry);
     }
-
+    
     /**
-     * Convert the value to the Well-Known-Text format.
-     *
-     * @return the well-known-text
+     * Convert to Well-Known-Text format.
      */
     public String toWKT() {
         WKTWriter w = new WKTWriter();
-        return w.write(geometry);
+        return w.write(this.geometry);
     }
 
     /**
-     * Convert to value to the Well-Known-Binary format.
-     *
-     * @return the well-known-binary
+     * Convert to Well-Known-Binary format.
      */
     public byte[] toWKB() {
         WKBWriter w = new WKBWriter();
-        return w.write(geometry);
+        return w.write(this.geometry);
     }
-
+    
     /**
-     * Convert a Well-Known-Text to a Geometry object.
-     *
-     * @param s the well-known-text
-     * @return the Geometry object
+     * Convert from Well-Known-Text format.
      */
     private static Geometry fromWKT(String s) {
         WKTReader r = new WKTReader();
@@ -191,12 +170,9 @@ public class ValueGeometry extends Value {
             throw DbException.convert(ex);
         }
     }
-
+    
     /**
-     * Convert a Well-Known-Binary to a Geometry object.
-     *
-     * @param s the well-known-binary
-     * @return the Geometry object
+     * Convert from Well-Known-Binary format.
      */
     private static Geometry fromWKB(byte[] bytes) {
         WKBReader r = new WKBReader();
@@ -206,5 +182,4 @@ public class ValueGeometry extends Value {
             throw DbException.convert(ex);
         }
     }
-
 }

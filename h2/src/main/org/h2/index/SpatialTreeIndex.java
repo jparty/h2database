@@ -5,12 +5,17 @@
  */
 package org.h2.index;
 
-import java.util.List;
+import java.util.Iterator;
+import org.h2.engine.Constants;
 import org.h2.engine.Session;
 import org.h2.message.DbException;
+import org.h2.mvstore.MVStore;
+import org.h2.mvstore.rtree.MVRTreeMap;
+import org.h2.mvstore.rtree.SpatialKey;
 import org.h2.result.Row;
 import org.h2.result.SearchRow;
 import org.h2.result.SortOrder;
+import org.h2.table.Column;
 import org.h2.table.IndexColumn;
 import org.h2.table.RegularTable;
 import org.h2.table.TableFilter;
@@ -18,14 +23,14 @@ import org.h2.value.Value;
 import org.h2.value.ValueGeometry;
 import com.vividsolutions.jts.geom.Envelope;
 import com.vividsolutions.jts.geom.Geometry;
-import com.vividsolutions.jts.index.quadtree.Quadtree;
 
 /**
  * This is an in-memory index based on a R-Tree.
  */
 public class SpatialTreeIndex extends BaseIndex implements SpatialIndex {
 
-    private Quadtree root;
+    private MVRTreeMap<Long> treeMap;
+    private MVStore store;
 
     private final RegularTable tableData;
     private long rowCount;
@@ -56,13 +61,14 @@ public class SpatialTreeIndex extends BaseIndex implements SpatialIndex {
                         + columns[0].column.getCreateSQL());
             }
         }
-
-        root = new Quadtree();
+        store = MVStore.open(null);
+        treeMap =  store.openMap("spatialIndex",
+                new MVRTreeMap.Builder<Long>());
     }
 
     @Override
     public void close(Session session) {
-        root = null;
+        store.close();
         closed = true;
     }
 
@@ -71,14 +77,27 @@ public class SpatialTreeIndex extends BaseIndex implements SpatialIndex {
         if (closed) {
             throw DbException.throwInternalError();
         }
-        root.insert(getEnvelope(row), row);
+        treeMap.add(getEnvelope(row),row.getKey());
         rowCount++;
     }
-
-    private Envelope getEnvelope(SearchRow row) {
+    
+    private SpatialKey getEnvelope(SearchRow row) {
         Value v = row.getValue(columnIds[0]);
         Geometry g = ((ValueGeometry) v).getGeometry();
-        return g.getEnvelopeInternal();
+        Envelope env = g.getEnvelopeInternal();
+        return new SpatialKey(row.getKey(),castDouble(env.getMinX(), false),castDouble(env.getMaxX(),true),
+                castDouble(env.getMinY(),false),castDouble(env.getMaxY(),true));
+    }
+
+    /**
+     * Cast the provided value to float and set an offset equal to the approximation error.
+     * @param value The double value to cast into float
+     * @param upperPrecision If true the offset is added to the value, else it is removed to the value.
+     * @return Casted value
+     */
+    private static float castDouble(double value, boolean upperPrecision) {
+        double epsilon = Math.abs (value)-Math.abs((float)value);
+        return (float)(value+(upperPrecision ? epsilon : -epsilon));
     }
 
     @Override
@@ -86,7 +105,7 @@ public class SpatialTreeIndex extends BaseIndex implements SpatialIndex {
         if (closed) {
             throw DbException.throwInternalError();
         }
-        if (!root.remove(getEnvelope(row), row)) {
+        if (!treeMap.remove(getEnvelope(row),row.getKey())) {
             throw DbException.throwInternalError("row not found");
         }
         rowCount--;
@@ -94,37 +113,43 @@ public class SpatialTreeIndex extends BaseIndex implements SpatialIndex {
 
     @Override
     public Cursor find(TableFilter filter, SearchRow first, SearchRow last) {
-        return find();
+        return find(filter.getSession());
     }
 
     @Override
     public Cursor find(Session session, SearchRow first, SearchRow last) {
-        return find();
+        return find(session);
     }
 
-    @SuppressWarnings("unchecked")
-    private Cursor find() {
-        // TODO use an external iterator,
-        // but let's see if we can get it working first
-        // TODO in the context of a spatial index,
-        // a query that uses ">" or "<" has no real meaning, so for now just ignore
-        // it and return all rows
-        List<Row> list = root.queryAll();
-        return new ListCursor(list, true /*first*/);
+    private Cursor find(Session session) {
+        return new ListCursor(treeMap.keySet().iterator(), tableData,session);
     }
-
+    
     @SuppressWarnings("unchecked")
     @Override
     public Cursor findByGeometry(TableFilter filter, SearchRow intersection) {
-        // TODO use an external iterator,
-        // but let's see if we can get it working first
-        List<Row> list;
-        if (intersection != null) {
-            list = root.query(getEnvelope(intersection));
-        } else {
-            list = root.queryAll();
+        if(intersection==null) {
+            return find(filter.getSession());
         }
-        return new ListCursor(list, true/*first*/);
+        return new ListCursor(treeMap.findIntersectingKeys(getEnvelope(intersection)), tableData, filter.getSession());
+    }
+
+    @Override
+    protected long getCostRangeIndex(int[] masks, long rowCount, SortOrder sortOrder) {
+        rowCount += Constants.COST_ROW_OFFSET;
+        long cost = rowCount;
+        long rows = rowCount;
+        if (masks == null) {
+            return cost;
+        }
+        for (Column column : columns) {
+            int index = column.getColumnId();
+            int mask = masks[index];
+            if ((mask & IndexCondition.OVERLAP) == IndexCondition.OVERLAP) {
+                cost = 3 + rows / 4;
+            }
+        }
+        return cost;
     }
 
     @Override
@@ -139,8 +164,8 @@ public class SpatialTreeIndex extends BaseIndex implements SpatialIndex {
 
     @Override
     public void truncate(Session session) {
-        root = null;
         rowCount = 0;
+        treeMap.clear();
     }
 
     @Override
@@ -163,13 +188,10 @@ public class SpatialTreeIndex extends BaseIndex implements SpatialIndex {
         if (closed) {
             throw DbException.throwInternalError();
         }
-
-        // TODO use an external iterator,
-        // but let's see if we can get it working first
-        @SuppressWarnings("unchecked")
-        List<Row> list = root.queryAll();
-
-        return new ListCursor(list, first);
+        if(!first) {
+            throw DbException.throwInternalError("Spatial Index can only be fetch by ascending order");
+        }
+        return find(session);
     }
 
     @Override
@@ -184,42 +206,44 @@ public class SpatialTreeIndex extends BaseIndex implements SpatialIndex {
 
     @Override
     public long getDiskSpaceUsed() {
+        // TODO estimate disk space usage
         return 0;
     }
 
-    /**
-     * A cursor of a fixed list of rows.
-     */
     private static final class ListCursor implements Cursor {
-        private final List<Row> rows;
-        private int index;
-        private Row current;
+        private final Iterator<SpatialKey> it;
+        private SpatialKey current;
+        private final RegularTable tableData;
+        private Session session;
 
-        public ListCursor(List<Row> rows, boolean first) {
-            this.rows = rows;
-            this.index = first ? 0 : rows.size();
+        public ListCursor(Iterator<SpatialKey> it, RegularTable tableData, Session session) {
+            this.it = it;
+            this.tableData = tableData;
+            this.session = session;
         }
 
         @Override
         public Row get() {
-            return current;
+            return tableData.getRow(session,current.getId());
         }
 
         @Override
         public SearchRow getSearchRow() {
-            return current;
+            return get();
         }
 
         @Override
         public boolean next() {
-            current = index >= rows.size() ? null : rows.get(index++);
-            return current != null;
+            if(!it.hasNext()) {
+                return false;
+            }
+            current = it.next();
+            return true;
         }
 
         @Override
         public boolean previous() {
-            current = index < 0 ? null : rows.get(index--);
-            return current != null;
+            return false;
         }
 
     }
