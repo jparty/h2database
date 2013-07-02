@@ -24,7 +24,7 @@ import org.h2.value.ValueGeometry;
  * Spatial datatype and index tests.
  */
 public class TestSpatial extends TestBase {
-    private static final Random geometryRand = new Random(478745);
+    private static final Random geometryRand = new Random(69);
 
     /**
      * Run just this test.
@@ -143,7 +143,7 @@ public class TestSpatial extends TestBase {
 
         PreparedStatement ps = conn.prepareStatement("insert into test(poly) values (?)");
         long overlapCount = 0;
-        for(int i=0;i<300;i++) {
+        for(int i=0;i<3500;i++) {
             Geometry geometry = getRandomGeometry(bbox.getMinX(),bbox.getMaxX(),bbox.getMinY(),bbox.getMaxY(),200);
             if(geometry.getEnvelopeInternal().intersects(testBBox)) {
                 overlapCount++;
