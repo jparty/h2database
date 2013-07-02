@@ -169,11 +169,10 @@ public class TestSpatial extends TestBase {
             overlaps.remove(rs.getInt(1));
             found++;
         }
+        // Index count must be the same as sequential count
         assertEquals(overlapCount,found);
         // Missing id still in overlaps map
-        for(Integer id : overlaps) {
-            System.out.println("Not found "+id);
-        }
+        assertTrue(overlaps.isEmpty());
         conn.close();
         deleteDb("spatialIndex");
     }
