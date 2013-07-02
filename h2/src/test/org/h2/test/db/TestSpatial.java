@@ -161,7 +161,7 @@ public class TestSpatial extends TestBase {
         // Create index
         stat.execute("create spatial index idx_test_poly on test(poly)");
         // Must find the same overlap count with index
-        ps = conn.prepareStatement("select distinct id from test where poly && ?::Geometry order by id");
+        ps = conn.prepareStatement("select id from test where poly && ?::Geometry");
         ps.setString(1,testBBoxString);
         rs = ps.executeQuery();
         long found = 0;
@@ -169,12 +169,11 @@ public class TestSpatial extends TestBase {
             overlaps.remove(rs.getInt(1));
             found++;
         }
-
-        System.out.println(overlapCount-found);
+        assertEquals(overlapCount,found);
+        // Missing id still in overlaps map
         for(Integer id : overlaps) {
             System.out.println("Not found "+id);
         }
-        //assertEquals(overlapCount,rs.getInt("cpt"));
         conn.close();
         deleteDb("spatialIndex");
     }
