@@ -147,9 +147,8 @@ public class IndexCursor implements Cursor {
             return;
         }
         if (!alwaysFalse) {
-            if (intersects != null && index instanceof SpatialTreeIndex) {
-                cursor = ((SpatialTreeIndex) index).findByGeometry(tableFilter,
-                        intersects);
+            if (intersects != null && index instanceof SpatialIndex) {
+                cursor = ((SpatialIndex)index).findByGeometry(tableFilter, intersects);
             } else {
                 cursor = index.find(tableFilter, start, end);
             }
@@ -191,7 +190,7 @@ public class IndexCursor implements Cursor {
         }
         return row;
     }
-
+    
     private SearchRow getSearchRow(SearchRow row, int columnId, Value v, boolean max) {
         if (row == null) {
             row = table.getTemplateRow();
