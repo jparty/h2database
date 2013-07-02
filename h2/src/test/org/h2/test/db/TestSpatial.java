@@ -10,7 +10,9 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.HashSet;
 import java.util.Random;
+import java.util.Set;
 
 import com.vividsolutions.jts.geom.Envelope;
 import com.vividsolutions.jts.geom.Geometry;
@@ -143,25 +145,35 @@ public class TestSpatial extends TestBase {
 
         PreparedStatement ps = conn.prepareStatement("insert into test(poly) values (?)");
         long overlapCount = 0;
-        for(int i=0;i<3500;i++) {
+        Set<Integer> overlaps = new HashSet<Integer>(680);
+        for(int i=1;i<=3500;i++) {
             Geometry geometry = getRandomGeometry(bbox.getMinX(),bbox.getMaxX(),bbox.getMinY(),bbox.getMaxY(),200);
-            if(geometry.getEnvelopeInternal().intersects(testBBox)) {
-                overlapCount++;
-            }
             ps.setObject(1,geometry);
             ps.execute();
+            ResultSet keys = ps.getGeneratedKeys();
+            keys.next();
+            if(geometry.getEnvelopeInternal().intersects(testBBox)) {
+                overlapCount++;
+                overlaps.add(keys.getInt(1));
+            }
         }
         ps.close();
         // Create index
         stat.execute("create spatial index idx_test_poly on test(poly)");
         // Must find the same overlap count with index
-        ps = conn.prepareStatement("select count(*) cpt from test where poly && ?::Geometry");
+        ps = conn.prepareStatement("select id from test where poly && ?::Geometry");
         ps.setString(1,testBBoxString);
         rs = ps.executeQuery();
-        assertTrue(rs.next());
-        assertEquals(overlapCount,rs.getInt("cpt"));
+        long found = 0;
+        while(rs.next()) {
+            overlaps.remove(rs.getInt(1));
+            found++;
+        }
+        // Index count must be the same as sequential count
+        assertEquals(overlapCount,found);
+        // Missing id still in overlaps map
+        assertTrue(overlaps.isEmpty());
         conn.close();
-        System.out.println(overlapCount);
         deleteDb("spatialIndex");
     }
 

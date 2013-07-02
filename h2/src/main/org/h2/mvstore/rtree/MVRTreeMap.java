@@ -513,11 +513,17 @@ public class MVRTreeMap<V> extends MVMap<SpatialKey, V> {
                 if (p.isLeaf()) {
                     pos = new CursorPos(p, 0, pos);
                     return;
+                } else if(pos != null && pos.page != p ) {
+                    pos = new CursorPos(p, 0, pos);
                 }
                 boolean found = false;
                 for (int i = 0; i < p.getKeyCount(); i++) {
                     if (check(false, (SpatialKey) p.getKey(i), x)) {
-                        pos = new CursorPos(p, i + 1, pos);
+                        if(pos==null || pos.page != p) {
+                            pos = new CursorPos(p, i, pos);
+                        } else {
+                            pos.index = i;
+                        }
                         p = p.getChildPage(i);
                         found = true;
                         break;
