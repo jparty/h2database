@@ -517,12 +517,16 @@ public class MVRTreeMap<V> extends MVMap<SpatialKey, V> {
                     pos = new CursorPos(p, 0, pos);
                 }
                 boolean found = false;
-                for (int i = 0; i < p.getKeyCount(); i++) {
+                int firstChildIndex = 0;
+                if(pos!=null && pos.page == p) {
+                    firstChildIndex = pos.index;
+                }
+                for (int i = firstChildIndex; i < p.getKeyCount(); i++) {
                     if (check(false, (SpatialKey) p.getKey(i), x)) {
                         if(pos==null || pos.page != p) {
-                            pos = new CursorPos(p, i, pos);
+                            pos = new CursorPos(p, i + 1, pos);
                         } else {
-                            pos.index = i;
+                            pos.index = i + 1;
                         }
                         p = p.getChildPage(i);
                         found = true;
@@ -530,10 +534,19 @@ public class MVRTreeMap<V> extends MVMap<SpatialKey, V> {
                     }
                 }
                 if (!found) {
-                    break;
+                    if(pos==null || pos.page.isLeaf()) {
+                        break;
+                    } else {
+                        pos = pos.parent;
+                        if(pos!=null) {
+                            p = pos.page;
+                        } else {
+                            //No more entries
+                            break;
+                        }
+                    }
                 }
             }
-            fetchNext();
         }
 
         @Override
