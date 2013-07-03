@@ -8,6 +8,7 @@ package org.h2.index;
 
 import java.util.ArrayList;
 import java.util.HashSet;
+
 import org.h2.engine.Session;
 import org.h2.expression.Comparison;
 import org.h2.message.DbException;
@@ -124,7 +125,7 @@ public class IndexCursor implements Cursor {
                     end = getSearchRow(end, columnId, v, false);
                 }
                 if (isIntersects) {
-                    intersects = getSpatialSearchRow(intersects, columnId, v, true);
+                    intersects = getSpatialSearchRow(intersects, columnId, v);
                 }
                 if (isStart || isEnd) {
                     // an X=? condition will produce less rows than
@@ -172,16 +173,13 @@ public class IndexCursor implements Cursor {
         return idxCol == null || idxCol.column == column;
     }
 
-    private SearchRow getSpatialSearchRow(SearchRow row, int columnId, Value v, boolean isIntersects) {
+    private SearchRow getSpatialSearchRow(SearchRow row, int columnId, Value v) {
         if (row == null) {
             row = table.getTemplateRow();
         } else {
+            // Merge the two envelopes
             ValueGeometry vg = (ValueGeometry) row.getValue(columnId);
-            if (isIntersects) {
-                v = ((ValueGeometry) v).intersection(vg);
-            } else {
-                v = ((ValueGeometry) v).union(vg);
-            }
+            v = ((ValueGeometry)v).envelopeUnion(vg);
         }
         if (columnId < 0) {
             row.setKey(v.getLong());

@@ -8,6 +8,9 @@ package org.h2.value;
 
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+
+import com.vividsolutions.jts.geom.Envelope;
+import com.vividsolutions.jts.geom.GeometryFactory;
 import org.h2.message.DbException;
 import com.vividsolutions.jts.geom.Geometry;
 import com.vividsolutions.jts.io.ParseException;
@@ -73,13 +76,15 @@ public class ValueGeometry extends Value {
         // It is useless to cache the envelope as the Geometry object do this already
         return geometry.getEnvelopeInternal().intersects(r.getGeometry().getEnvelopeInternal());
     }
-    
-    public Value intersection(ValueGeometry r) {
-        return get(this.geometry.intersection(r.geometry));
-    }
-    
-    public Value union(ValueGeometry r) {
-        return get(this.geometry.union(r.geometry));
+
+    /**
+     * @return the union of this geometry envelope and another geometry envelope
+     */
+    public Value envelopeUnion(ValueGeometry r) {
+        GeometryFactory gf = new GeometryFactory();
+        Envelope mergedEnvelope = new Envelope(geometry.getEnvelopeInternal());
+        mergedEnvelope.expandToInclude(r.getGeometry().getEnvelopeInternal());
+        return get(gf.toGeometry(mergedEnvelope));
     }
     
     @Override
