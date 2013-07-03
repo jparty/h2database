@@ -300,6 +300,7 @@ public class Comparison extends Condition {
         case EQUAL_NULL_SAFE:
         case NOT_EQUAL:
         case NOT_EQUAL_NULL_SAFE:
+        case OVERLAP:
             return type;
         case BIGGER_EQUAL:
             return SMALLER_EQUAL;

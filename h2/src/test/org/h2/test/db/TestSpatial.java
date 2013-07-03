@@ -162,7 +162,7 @@ public class TestSpatial extends TestBase {
         // these queries actually have no meaning in the context of a spatial index, but 
         // check them anyhow
         stat.executeQuery("select * from test where poly = 'POLYGON ((1 1, 1 2, 2 2, 1 1))'::Geometry");
-        stat.executeQuery("select * from test where poly > 'POLYGON ((1 1, 1 2, 2 2, 1 1))'::Geometry");
+        stat.executeQuery("select * from te44st where poly > 'POLYGON ((1 1, 1 2, 2 2, 1 1))'::Geometry");
         stat.executeQuery("select * from test where poly < 'POLYGON ((1 1, 1 2, 2 2, 1 1))'::Geometry");
 
         rs = stat.executeQuery("select * from test where poly && 'POLYGON ((1 1, 1 2, 2 2, 1 1))'::Geometry");
@@ -178,7 +178,6 @@ public class TestSpatial extends TestBase {
         stat.execute("drop table test");
         testRandom(conn, 69, 3500);
         testRandom(conn, 44, 3500);
-        testRandom(conn, 44, 11500);
         conn.close();
         deleteDb("spatialIndex");
     }
