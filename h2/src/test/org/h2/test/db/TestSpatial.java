@@ -26,7 +26,6 @@ import org.h2.value.ValueGeometry;
  * Spatial datatype and index tests.
  */
 public class TestSpatial extends TestBase {
-    private static final Random geometryRand = new Random(69);
 
     /**
      * Run just this test.
@@ -80,7 +79,7 @@ public class TestSpatial extends TestBase {
      * @param maxLength LineString maximum length
      * @return A segment within this bounding box
      */
-    public static Geometry getRandomGeometry(double minX,double maxX,double minY, double maxY, double maxLength) {
+    public static Geometry getRandomGeometry(Random geometryRand,double minX,double maxX,double minY, double maxY, double maxLength) {
         GeometryFactory factory = new GeometryFactory();
         // Create the start point
         Coordinate start = new Coordinate(geometryRand.nextDouble()*(maxX-minX)+minX,
@@ -94,6 +93,56 @@ public class TestSpatial extends TestBase {
         return factory.createLineString(new Coordinate[]{start,end});
     }
 
+   private void testRandom(Connection conn, long seed,long size) throws SQLException {
+       Statement stat = conn.createStatement();
+       stat.execute("drop table if exists test");
+       Random geometryRand = new Random(seed);
+       // Generate a set of geometry
+       // It is marked as random, but it generate always the same geometry set, given the same seed
+       stat.execute("create memory table test(id long primary key auto_increment, poly geometry)");
+       // Create segment generation bounding box
+       Envelope bbox = ValueGeometry.get("POLYGON ((301804.1049793153 2251719.1222191923," +
+               " 301804.1049793153 2254747.2888244865, 304646.87362918374 2254747.2888244865," +
+               " 304646.87362918374 2251719.1222191923, 301804.1049793153 2251719.1222191923))")
+               .getGeometry().getEnvelopeInternal();
+       // Create overlap test bounding box
+       String testBBoxString = "POLYGON ((302215.44416332216 2252748, 302215.44416332216 2253851.781225762," +
+               " 303582.85796541866 2253851.781225762, 303582.85796541866 2252748.526908161," +
+               " 302215.44416332216 2252748))";
+       Envelope testBBox = ValueGeometry.get(testBBoxString).getGeometry().getEnvelopeInternal();
+
+       PreparedStatement ps = conn.prepareStatement("insert into test(poly) values (?)");
+       long overlapCount = 0;
+       Set<Integer> overlaps = new HashSet<Integer>(680);
+       for(int i=1;i<=size;i++) {
+           Geometry geometry = getRandomGeometry(geometryRand,bbox.getMinX(),bbox.getMaxX(),bbox.getMinY(),bbox.getMaxY(),200);
+           ps.setObject(1,geometry);
+           ps.execute();
+           ResultSet keys = ps.getGeneratedKeys();
+           keys.next();
+           if(geometry.getEnvelopeInternal().intersects(testBBox)) {
+               overlapCount++;
+               overlaps.add(keys.getInt(1));
+           }
+       }
+       ps.close();
+       // Create index
+       stat.execute("create spatial index idx_test_poly on test(poly)");
+       // Must find the same overlap count with index
+       ps = conn.prepareStatement("select id from test where poly && ?::Geometry");
+       ps.setString(1,testBBoxString);
+       ResultSet rs = ps.executeQuery();
+       long found = 0;
+       while(rs.next()) {
+           overlaps.remove(rs.getInt(1));
+           found++;
+       }
+       // Index count must be the same as sequential count
+       assertEquals(overlapCount,found);
+       // Missing id still in overlaps map
+       assertTrue(overlaps.isEmpty());
+       stat.execute("drop table if exists test");
+   }
 
     /** test in the in-memory spatial index */
     private void testMemorySpatialIndex() throws SQLException {
@@ -127,52 +176,8 @@ public class TestSpatial extends TestBase {
         assertFalse(rs.next());
 
         stat.execute("drop table test");
-
-
-        // Generate a set of geometry
-        // It is marked as random, but it generate always the same geometry set, given the same seed
-        stat.execute("create memory table test(id long primary key auto_increment, poly geometry)");
-        // Create segment generation bounding box
-        Envelope bbox = ValueGeometry.get("POLYGON ((301804.1049793153 2251719.1222191923," +
-                " 301804.1049793153 2254747.2888244865, 304646.87362918374 2254747.2888244865," +
-                " 304646.87362918374 2251719.1222191923, 301804.1049793153 2251719.1222191923))")
-                .getGeometry().getEnvelopeInternal();
-        // Create overlap test bounding box
-        String testBBoxString = "POLYGON ((302215.44416332216 2252748, 302215.44416332216 2253851.781225762," +
-                " 303582.85796541866 2253851.781225762, 303582.85796541866 2252748.526908161," +
-                " 302215.44416332216 2252748))";
-        Envelope testBBox = ValueGeometry.get(testBBoxString).getGeometry().getEnvelopeInternal();
-
-        PreparedStatement ps = conn.prepareStatement("insert into test(poly) values (?)");
-        long overlapCount = 0;
-        Set<Integer> overlaps = new HashSet<Integer>(680);
-        for(int i=1;i<=3500;i++) {
-            Geometry geometry = getRandomGeometry(bbox.getMinX(),bbox.getMaxX(),bbox.getMinY(),bbox.getMaxY(),200);
-            ps.setObject(1,geometry);
-            ps.execute();
-            ResultSet keys = ps.getGeneratedKeys();
-            keys.next();
-            if(geometry.getEnvelopeInternal().intersects(testBBox)) {
-                overlapCount++;
-                overlaps.add(keys.getInt(1));
-            }
-        }
-        ps.close();
-        // Create index
-        stat.execute("create spatial index idx_test_poly on test(poly)");
-        // Must find the same overlap count with index
-        ps = conn.prepareStatement("select id from test where poly && ?::Geometry");
-        ps.setString(1,testBBoxString);
-        rs = ps.executeQuery();
-        long found = 0;
-        while(rs.next()) {
-            overlaps.remove(rs.getInt(1));
-            found++;
-        }
-        // Index count must be the same as sequential count
-        assertEquals(overlapCount,found);
-        // Missing id still in overlaps map
-        assertTrue(overlaps.isEmpty());
+        testRandom(conn, 69, 3500);
+        testRandom(conn, 44, 3500);
         conn.close();
         deleteDb("spatialIndex");
     }
