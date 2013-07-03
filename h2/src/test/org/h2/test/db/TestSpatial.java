@@ -178,6 +178,7 @@ public class TestSpatial extends TestBase {
         stat.execute("drop table test");
         testRandom(conn, 69, 3500);
         testRandom(conn, 44, 3500);
+        testRandom(conn, 44, 11500);
         conn.close();
         deleteDb("spatialIndex");
     }

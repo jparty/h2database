@@ -540,6 +540,9 @@ public class MVRTreeMap<V> extends MVMap<SpatialKey, V> {
                         pos = pos.parent;
                         if(pos!=null) {
                             p = pos.page;
+                        } else {
+                            //No more entries
+                            break;
                         }
                     }
                 }
