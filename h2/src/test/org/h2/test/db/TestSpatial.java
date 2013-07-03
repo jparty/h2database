@@ -62,8 +62,8 @@ public class TestSpatial extends TestBase {
         rs = stat.executeQuery("select * from test where poly = 'POLYGON ((1 1, 1 2, 2 2, 1 1))'");
         assertTrue(rs.next());
         assertEquals(1, rs.getInt(1));
-        stat.executeQuery("select * from test where polygon > 'POLYGON ((1 1, 1 2, 2 2, 1 1))'");
-        stat.executeQuery("select * from test where polygon < 'POLYGON ((1 1, 1 2, 2 2, 1 1))'");
+        stat.executeQuery("select * from test where poly > 'POLYGON ((1 1, 1 2, 2 2, 1 1))'");
+        stat.executeQuery("select * from test where poly < 'POLYGON ((1 1, 1 2, 2 2, 1 1))'");
 
         stat.execute("drop table test");
         conn.close();
