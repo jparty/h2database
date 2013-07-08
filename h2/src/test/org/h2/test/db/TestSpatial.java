@@ -40,6 +40,7 @@ public class TestSpatial extends TestBase {
     public void test() throws SQLException {
         deleteDb("spatial");
         testSpatialValues();
+        testOverlap();
         testNotOverlap();
         testMemorySpatialIndex();
         deleteDb("spatial");
@@ -144,21 +145,45 @@ public class TestSpatial extends TestBase {
        assertTrue(overlaps.isEmpty());
        stat.execute("drop table if exists test");
    }
+    private void testOverlap() throws SQLException {
+        deleteDb("spatial");
+        Connection conn = getConnection("spatial");
+        try {
+            Statement stat = conn.createStatement();
+            stat.execute("create memory table test(id int primary key, poly geometry)");
+            stat.execute("insert into test values(1, 'POLYGON ((1 1, 1 2, 2 2, 1 1))')");
+            stat.execute("insert into test values(2, 'POLYGON ((3 1, 3 2, 4 2, 3 1))')");
+            stat.execute("insert into test values(3, 'POLYGON ((1 3, 1 4, 2 4, 1 3))')");
+
+            ResultSet rs = stat.executeQuery("select * from test where poly && 'POINT (1.5 1.5)'::Geometry");
+            assertTrue(rs.next());
+            assertEquals(1,rs.getInt("id"));
+            assertFalse(rs.next());
+            stat.execute("drop table test");
+        } finally {
+            conn.close();
+        }
+    }
     private void testNotOverlap() throws SQLException {
         deleteDb("spatial");
         Connection conn = getConnection("spatial");
-        Statement stat = conn.createStatement();
-        stat.execute("create memory table test(id int primary key, poly geometry)");
-        stat.execute("insert into test values(1, 'POLYGON ((1 1, 1 2, 2 2, 1 1))')");
-        stat.execute("insert into test values(2, 'POLYGON ((3 1, 3 2, 4 2, 3 1))')");
-        stat.execute("insert into test values(3, 'POLYGON ((1 3, 1 4, 2 4, 1 3))')");
+        try {
+            Statement stat = conn.createStatement();
+            stat.execute("create memory table test(id int primary key, poly geometry)");
+            stat.execute("insert into test values(1, 'POLYGON ((1 1, 1 2, 2 2, 1 1))')");
+            stat.execute("insert into test values(2, 'POLYGON ((3 1, 3 2, 4 2, 3 1))')");
+            stat.execute("insert into test values(3, 'POLYGON ((1 3, 1 4, 2 4, 1 3))')");
 
-        ResultSet rs = stat.executeQuery("select * from test where NOT poly && 'POINT (1.5 1.5)'::Geometry");
-        assertTrue(rs.next());
-        assertEquals(2,rs.getInt("id"));
-        assertTrue(rs.next());
-        assertEquals(3,rs.getInt("id"));
-        assertFalse(rs.next());
+            ResultSet rs = stat.executeQuery("select * from test where NOT poly && 'POINT (1.5 1.5)'::Geometry");
+            assertTrue(rs.next());
+            assertEquals(2,rs.getInt("id"));
+            assertTrue(rs.next());
+            assertEquals(3,rs.getInt("id"));
+            assertFalse(rs.next());
+            stat.execute("drop table test");
+        } finally {
+            conn.close();
+        }
     }
     /** test in the in-memory spatial index */
     private void testMemorySpatialIndex() throws SQLException {
