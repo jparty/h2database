@@ -160,7 +160,7 @@ public class Parser {
     private static final int SMALLER = 9, SMALLER_EQUAL = 10, NOT_EQUAL = 11, AT = 12;
     private static final int MINUS = 13, PLUS = 14, STRING_CONCAT = 15;
     private static final int OPEN = 16, CLOSE = 17, NULL = 18, TRUE = 19, FALSE = 20;
-    private static final int CURRENT_TIMESTAMP = 21, CURRENT_DATE = 22, CURRENT_TIME = 23, ROWNUM = 24, OVERLAP = 25;
+    private static final int CURRENT_TIMESTAMP = 21, CURRENT_DATE = 22, CURRENT_TIME = 23, ROWNUM = 24, OVERLAP = 25, NOT_OVERLAP = 26;
 
     private final Database database;
     private final Session session;
@@ -5449,6 +5449,8 @@ public class Parser {
             return Comparison.NOT_EQUAL;
         case OVERLAP:
             return Comparison.OVERLAP;
+        case NOT_OVERLAP:
+            return Comparison.NOT_OVERLAP;
         default:
             return -1;
         }

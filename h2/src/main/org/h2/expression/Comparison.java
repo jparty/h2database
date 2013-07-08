@@ -106,6 +106,12 @@ public class Comparison extends Condition {
      */
     public static final int OVERLAP = 11;
 
+    /**
+     * Operator NOT &&
+     * This operator tells if two sides have no elements in common.
+     */
+    public static final int NOT_OVERLAP = 12;
+
     
     private final Database database;
     private int compareType;
@@ -128,6 +134,9 @@ public class Comparison extends Condition {
             break;
         case IS_NOT_NULL:
             sql = left.getSQL() + " IS NOT NULL";
+            break;
+        case NOT_OVERLAP:
+            sql = "NOT "+left.getSQL() + " " + getCompareOperator(OVERLAP) + " " + right.getSQL();
             break;
         default:
             sql = left.getSQL() + " " + getCompareOperator(compareType) + " " + right.getSQL();
@@ -282,10 +291,13 @@ public class Comparison extends Condition {
         case SMALLER:
             result = database.compare(l, r) < 0;
             break;
+        case NOT_OVERLAP:
         case OVERLAP: {
             ValueGeometry lg = (ValueGeometry) l.convertTo(Value.GEOMETRY);
             ValueGeometry rg = (ValueGeometry) r.convertTo(Value.GEOMETRY);
-            result = lg.boundingBoxIntersects(rg);
+            boolean intersects = lg.boundingBoxIntersects(rg);
+            // true if overlap and intersects or not_overlap and not intersects
+            result = !((compareType == OVERLAP) ^ intersects);
             break;
         }
         default:
@@ -337,6 +349,10 @@ public class Comparison extends Condition {
             return IS_NOT_NULL;
         case IS_NOT_NULL:
             return IS_NULL;
+        case OVERLAP:
+            return NOT_OVERLAP;
+        case NOT_OVERLAP:
+            return OVERLAP;
         default:
             throw DbException.throwInternalError("type=" + compareType);
         }
@@ -400,6 +416,7 @@ public class Comparison extends Condition {
         boolean addIndex;
         switch (compareType) {
         case NOT_EQUAL:
+        case NOT_OVERLAP:
         case NOT_EQUAL_NULL_SAFE:
             addIndex = false;
             break;
