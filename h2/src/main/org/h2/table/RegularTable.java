@@ -229,7 +229,7 @@ public class RegularTable extends TableBase {
                 mainIndex.setMainIndexColumn(mainIndexColumn);
                 index = new PageDelegateIndex(this, indexId, indexName, indexType, mainIndex, create, session);
             } else if (indexType.isSpatial()) {
-                index = new SpatialTreeIndex(this, indexId, indexName, cols, indexType, true, session);
+                index = new SpatialTreeIndex(this, indexId, indexName, cols, indexType, true, create, session);
             } else {
                 index = new PageBtreeIndex(this, indexId, indexName, cols, indexType, create, session);
             }
@@ -243,7 +243,7 @@ public class RegularTable extends TableBase {
             } else if (!indexType.isSpatial()) {
                 index = new TreeIndex(this, indexId, indexName, cols, indexType);
             } else {
-                index = new SpatialTreeIndex(this, indexId, indexName, cols, indexType, false, session);
+                index = new SpatialTreeIndex(this, indexId, indexName, cols, indexType, false, true, session);
             }
         }
         if (database.isMultiVersion()) {

@@ -228,7 +228,6 @@ public class TestSpatial extends TestBase {
         
         stat.execute("create memory table test(id int primary key, poly geometry)");
         stat.execute("create spatial index idx_test_poly on test(poly)");
-        //stat.execute("create index pk on test(id)");
         stat.execute("insert into test values(1, 'POLYGON ((1 1, 1 2, 2 2, 1 1))')");
         ResultSet rs = stat.executeQuery("explain select * from test where poly && 'POLYGON ((1 1, 1 2, 2 2, 1 1))'::Geometry");
         rs.next();

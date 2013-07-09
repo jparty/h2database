@@ -36,9 +36,8 @@ public class SpatialTreeIndex extends PageIndex implements SpatialIndex {
     private static final String MAP_PREFIX  = "RTREE_";
 
     private final RegularTable tableData;
-    private long rowCount;
     private boolean closed;
-
+    private boolean needRebuild;
     /**
      * Constructor.
      * @param table Table instance
@@ -49,9 +48,12 @@ public class SpatialTreeIndex extends PageIndex implements SpatialIndex {
      * @param persistent Persistent, can be used in-memory or stored in a file.
      */
     public SpatialTreeIndex(RegularTable table, int id, String indexName, IndexColumn[] columns, IndexType indexType,
-                            boolean persistent, Session session) {
+                            boolean persistent,boolean create, Session session) {
         if (indexType.isUnique()) {
             throw DbException.getUnsupportedException("not unique");
+        }
+        if(!persistent && !create) {
+            throw DbException.getUnsupportedException("Non persistent index called with create==false");
         }
         if (columns.length > 1) {
             throw DbException.getUnsupportedException("can only do one column");
@@ -65,8 +67,8 @@ public class SpatialTreeIndex extends PageIndex implements SpatialIndex {
         if ((columns[0].sortType & SortOrder.NULLS_LAST) != 0) {
             throw DbException.getUnsupportedException("cannot do nulls last");
         }
-
         initBaseIndex(table, id, indexName, columns, indexType);
+        this.needRebuild = create;
         tableData = table;
         if (!database.isStarting()) {
             if (columns[0].column.getType() != Value.GEOMETRY) {
@@ -87,13 +89,14 @@ public class SpatialTreeIndex extends PageIndex implements SpatialIndex {
             store = session.getDatabase().getMvStore().getStore();
             /** Called after CREATE SPATIAL INDEX or
              *  by {@link org.h2.store.PageStore#addMeta} */
-            treeMap =  store.openMap(MAP_PREFIX + getId(),
+              treeMap =  store.openMap(MAP_PREFIX + getId(),
                     new MVRTreeMap.Builder<Long>());
         }
     }
 
     @Override
     public void close(Session session) {
+        store.store();
         store.close();
         closed = true;
     }
@@ -104,7 +107,6 @@ public class SpatialTreeIndex extends PageIndex implements SpatialIndex {
             throw DbException.throwInternalError();
         }
         treeMap.add(getEnvelope(row),row.getKey());
-        rowCount++;
     }
     
     private SpatialKey getEnvelope(SearchRow row) {
@@ -123,7 +125,6 @@ public class SpatialTreeIndex extends PageIndex implements SpatialIndex {
         if (!treeMap.remove(getEnvelope(row),row.getKey())) {
             throw DbException.throwInternalError("row not found");
         }
-        rowCount--;
     }
 
     @Override
@@ -192,7 +193,7 @@ public class SpatialTreeIndex extends PageIndex implements SpatialIndex {
 
     @Override
     public boolean needRebuild() {
-        return true;
+        return needRebuild;
     }
 
     @Override
@@ -213,12 +214,12 @@ public class SpatialTreeIndex extends PageIndex implements SpatialIndex {
 
     @Override
     public long getRowCount(Session session) {
-        return rowCount;
+        return treeMap.getSize();
     }
 
     @Override
     public long getRowCountApproximation() {
-        return rowCount;
+        return treeMap.getSize();
     }
 
     @Override
@@ -229,7 +230,6 @@ public class SpatialTreeIndex extends PageIndex implements SpatialIndex {
 
     @Override
     public void writeRowCount() {
-        //TODO
     }
 
     private static final class ListCursor implements Cursor {
