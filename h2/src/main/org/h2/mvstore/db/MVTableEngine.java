@@ -33,6 +33,19 @@ public class MVTableEngine implements TableEngine {
         if (!data.persistData || (data.temporary && !data.persistIndexes)) {
             return new RegularTable(data);
         }
+        initMVStore(db);
+        Store store = db.getMvStore();
+        MVTable table = new MVTable(data, store);
+        store.openTables.add(table);
+        table.init(data.session);
+        return table;
+    }
+
+    /**
+     * Init the MVStore file and set it to the DataBase
+     * @param db Open database
+     */
+    public static void initMVStore(Database db) {
         Store store = db.getMvStore();
         if (store == null) {
             byte[] key = db.getFilePasswordHash();
@@ -56,12 +69,7 @@ public class MVTableEngine implements TableEngine {
             }
             db.setMvStore(store);
         }
-        MVTable table = new MVTable(data, store);
-        store.openTables.add(table);
-        table.init(data.session);
-        return table;
     }
-
     /**
      * A store with open tables.
      */
