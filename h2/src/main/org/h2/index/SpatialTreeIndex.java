@@ -10,6 +10,7 @@ import org.h2.engine.Constants;
 import org.h2.engine.Session;
 import org.h2.message.DbException;
 import org.h2.mvstore.MVStore;
+import org.h2.mvstore.db.MVTableEngine;
 import org.h2.mvstore.rtree.MVRTreeMap;
 import org.h2.mvstore.rtree.SpatialKey;
 import org.h2.result.Row;
@@ -26,17 +27,29 @@ import com.vividsolutions.jts.geom.Geometry;
 
 /**
  * This is an in-memory index based on a R-Tree.
+ * @author Noël Grandin
+ * @author Nicolas Fortin IRSTV FR CNRS 24888
  */
-public class SpatialTreeIndex extends BaseIndex implements SpatialIndex {
-
+public class SpatialTreeIndex extends PageIndex implements SpatialIndex {
     private MVRTreeMap<Long> treeMap;
     private MVStore store;
+    private static final String MAP_PREFIX  = "RTREE_";
 
     private final RegularTable tableData;
     private long rowCount;
     private boolean closed;
 
-    public SpatialTreeIndex(RegularTable table, int id, String indexName, IndexColumn[] columns, IndexType indexType) {
+    /**
+     * Constructor.
+     * @param table Table instance
+     * @param id Index Id
+     * @param indexName Index name
+     * @param columns Indexed columns (only one geometry column allowed)
+     * @param indexType Index type (only spatial index)
+     * @param persistent Persistent, can be used in-memory or stored in a file.
+     */
+    public SpatialTreeIndex(RegularTable table, int id, String indexName, IndexColumn[] columns, IndexType indexType,
+                            boolean persistent, Session session) {
         if (indexType.isUnique()) {
             throw DbException.getUnsupportedException("not unique");
         }
@@ -61,9 +74,22 @@ public class SpatialTreeIndex extends BaseIndex implements SpatialIndex {
                         + columns[0].column.getCreateSQL());
             }
         }
-        store = MVStore.open(null);
-        treeMap =  store.openMap("spatialIndex",
-                new MVRTreeMap.Builder<Long>());
+        if(!persistent) {
+            // Index in memory
+            store = MVStore.open(null);
+            treeMap =  store.openMap("spatialIndex",
+                    new MVRTreeMap.Builder<Long>());
+        } else {
+            if(id<0) {
+                throw DbException.getUnsupportedException("Persistent index with id<0");
+            }
+            MVTableEngine.initMVStore(session.getDatabase());
+            store = session.getDatabase().getMvStore().getStore();
+            /** Called after CREATE SPATIAL INDEX or
+             *  by {@link org.h2.store.PageStore#addMeta} */
+            treeMap =  store.openMap(MAP_PREFIX + getId(),
+                    new MVRTreeMap.Builder<Long>());
+        }
     }
 
     @Override
@@ -146,14 +172,16 @@ public class SpatialTreeIndex extends BaseIndex implements SpatialIndex {
         return getCostRangeIndex(masks, tableData.getRowCountApproximation(), sortOrder);
     }
 
+
     @Override
     public void remove(Session session) {
-        truncate(session);
+        if(!treeMap.isClosed()) {
+            treeMap.removeMap();
+        }
     }
 
     @Override
     public void truncate(Session session) {
-        rowCount = 0;
         treeMap.clear();
     }
 
@@ -197,6 +225,11 @@ public class SpatialTreeIndex extends BaseIndex implements SpatialIndex {
     public long getDiskSpaceUsed() {
         // TODO estimate disk space usage
         return 0;
+    }
+
+    @Override
+    public void writeRowCount() {
+        //TODO
     }
 
     private static final class ListCursor implements Cursor {

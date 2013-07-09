@@ -228,10 +228,10 @@ public class RegularTable extends TableBase {
             if (mainIndexColumn != -1) {
                 mainIndex.setMainIndexColumn(mainIndexColumn);
                 index = new PageDelegateIndex(this, indexId, indexName, indexType, mainIndex, create, session);
-            } else if (!indexType.isSpatial()) {
-                index = new PageBtreeIndex(this, indexId, indexName, cols, indexType, create, session);
+            } else if (indexType.isSpatial()) {
+                index = new SpatialTreeIndex(this, indexId, indexName, cols, indexType, true, session);
             } else {
-                throw new UnsupportedOperationException();
+                index = new PageBtreeIndex(this, indexId, indexName, cols, indexType, create, session);
             }
         } else {
             if (indexType.isHash() && cols.length <= 1) {
@@ -243,7 +243,7 @@ public class RegularTable extends TableBase {
             } else if (!indexType.isSpatial()) {
                 index = new TreeIndex(this, indexId, indexName, cols, indexType);
             } else {
-                index = new SpatialTreeIndex(this, indexId, indexName, cols, indexType);
+                index = new SpatialTreeIndex(this, indexId, indexName, cols, indexType, false, session);
             }
         }
         if (database.isMultiVersion()) {

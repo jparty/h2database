@@ -43,6 +43,7 @@ public class TestSpatial extends TestBase {
         testOverlap();
         testNotOverlap();
         testMemorySpatialIndex();
+        testPersistentSpatialIndex();
         deleteDb("spatial");
     }
 
@@ -163,6 +164,40 @@ public class TestSpatial extends TestBase {
         } finally {
             conn.close();
         }
+    }
+    private void testPersistentSpatialIndex() throws SQLException {
+        deleteDb("spatial_pers");
+        Connection conn = getConnection("spatial_pers");
+        try {
+            Statement stat = conn.createStatement();
+            stat.execute("create table test(id int primary key, poly geometry)");
+            stat.execute("insert into test values(1, 'POLYGON ((1 1, 1 2, 2 2, 1 1))')");
+            stat.execute("insert into test values(2, 'POLYGON ((3 1, 3 2, 4 2, 3 1))')");
+            stat.execute("insert into test values(3, 'POLYGON ((1 3, 1 4, 2 4, 1 3))')");
+            stat.execute("create spatial index on test(poly)");
+
+            ResultSet rs = stat.executeQuery("select * from test where poly && 'POINT (1.5 1.5)'::Geometry");
+            assertTrue(rs.next());
+            assertEquals(1, rs.getInt("id"));
+            assertFalse(rs.next());
+            rs.close();
+            // Close the database
+        } finally {
+            conn.close();
+        }
+
+        conn = getConnection("spatial_pers");
+        try {
+            Statement stat = conn.createStatement();
+            ResultSet rs = stat.executeQuery("select * from test where poly && 'POINT (1.5 1.5)'::Geometry");
+            assertTrue(rs.next());
+            assertEquals(1,rs.getInt("id"));
+            assertFalse(rs.next());
+            stat.execute("drop table test");
+        } finally {
+            conn.close();
+        }
+
     }
     private void testNotOverlap() throws SQLException {
         deleteDb("spatial");

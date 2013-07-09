@@ -520,6 +520,7 @@ public class Data {
             }
             break;
         }
+        case Value.GEOMETRY:
         case Value.JAVA_OBJECT: {
             writeByte((byte) type);
             byte[] b = v.getBytesNoCopy();
@@ -671,20 +672,6 @@ public class Data {
             }
             break;
         }
-        case Value.GEOMETRY: {
-            writeByte((byte) type);
-            byte[] b = v.getBytes();
-            int len = b.length;
-            if (len < 32) {
-                writeByte((byte) (BYTES_0_31 + len));
-                write(b, 0, b.length);
-            } else {
-                writeByte((byte) type);
-                writeVarInt(b.length);
-                write(b, 0, b.length);
-            }
-            break;
-        }
         default:
             DbException.throwInternalError("type=" + v.getType());
         }
@@ -769,6 +756,12 @@ public class Data {
             byte[] b = DataUtils.newBytes(len);
             read(b, 0, len);
             return ValueBytes.getNoCopy(b);
+        }
+        case Value.GEOMETRY: {
+            int len = readVarInt();
+            byte[] b = DataUtils.newBytes(len);
+            read(b, 0, len);
+            return ValueGeometry.get(b);
         }
         case Value.JAVA_OBJECT: {
             int len = readVarInt();
@@ -999,6 +992,7 @@ public class Data {
             Timestamp ts = v.getTimestamp();
             return 1 + getVarLongLen(DateTimeUtils.getTimeLocalWithoutDst(ts)) + getVarIntLen(ts.getNanos());
         }
+        case Value.GEOMETRY:
         case Value.JAVA_OBJECT: {
             byte[] b = v.getBytesNoCopy();
             return 1 + getVarIntLen(b.length) + b.length;
@@ -1088,14 +1082,6 @@ public class Data {
                 throw DbException.convert(e);
             }
             return len;
-        }
-        case Value.GEOMETRY: {
-            byte[] b = v.getBytesNoCopy();
-            int len = b.length;
-            if (len < 32) {
-                return 1 + b.length;
-            }
-            return 1 + getVarIntLen(b.length) + b.length;
         }
         default:
             throw DbException.throwInternalError("type=" + v.getType());

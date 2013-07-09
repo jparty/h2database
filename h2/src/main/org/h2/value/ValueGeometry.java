@@ -127,7 +127,12 @@ public class ValueGeometry extends Value {
     public byte[] getBytes() {
         return toWKB();
     }
-    
+
+    @Override
+    public byte[] getBytesNoCopy() {
+        return toWKB();
+    }
+
     @Override
     public void set(PreparedStatement prep, int parameterIndex) throws SQLException {
         prep.setObject(parameterIndex, geometry);
@@ -160,7 +165,7 @@ public class ValueGeometry extends Value {
      * Convert to Well-Known-Binary format.
      */
     public byte[] toWKB() {
-        WKBWriter w = new WKBWriter();
+        WKBWriter w = new WKBWriter(3,true);
         return w.write(this.geometry);
     }
     
