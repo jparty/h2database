@@ -1,18 +1,9 @@
-/*
- * Copyright 2004-2013 H2 Group. Multiple-Licensed under the H2 License, Version
- * 1.0, and under the Eclipse Public License, Version 1.0
- * (http://h2database.com/html/license.html). Initial Developer: H2 Group
- */
 package org.h2.index;
 
-import java.util.Iterator;
+import com.vividsolutions.jts.index.strtree.STRtree;
 import org.h2.engine.Constants;
 import org.h2.engine.Session;
 import org.h2.message.DbException;
-import org.h2.mvstore.MVStore;
-import org.h2.mvstore.db.MVTableEngine;
-import org.h2.mvstore.rtree.MVRTreeMap;
-import org.h2.mvstore.rtree.SpatialKey;
 import org.h2.result.Row;
 import org.h2.result.SearchRow;
 import org.h2.result.SortOrder;
@@ -25,35 +16,24 @@ import org.h2.value.ValueGeometry;
 import com.vividsolutions.jts.geom.Envelope;
 import com.vividsolutions.jts.geom.Geometry;
 
+import java.util.List;
+
 /**
- * This is an index based on a MVR-TreeMap.
+ * This is an in-memory index based on a R-Tree.
  * @author Noël Grandin
  * @author Nicolas Fortin IRSTV FR CNRS 24888
  */
-public class SpatialTreeIndex extends PageIndex implements SpatialIndex {
-    private MVRTreeMap<Long> treeMap;
-    private MVStore store;
-    private static final String MAP_PREFIX  = "RTREE_";
+public class SpatialMemoryTreeIndex extends BaseIndex implements SpatialIndex {
+
+    private STRtree root;
 
     private final RegularTable tableData;
+    private long rowCount;
     private boolean closed;
-    private boolean needRebuild;
-    /**
-     * Constructor.
-     * @param table Table instance
-     * @param id Index Id
-     * @param indexName Index name
-     * @param columns Indexed columns (only one geometry column allowed)
-     * @param indexType Index type (only spatial index)
-     * @param persistent Persistent, can be used in-memory or stored in a file.
-     */
-    public SpatialTreeIndex(RegularTable table, int id, String indexName, IndexColumn[] columns, IndexType indexType,
-                            boolean persistent,boolean create, Session session) {
+
+    public SpatialMemoryTreeIndex(RegularTable table, int id, String indexName, IndexColumn[] columns, IndexType indexType) {
         if (indexType.isUnique()) {
             throw DbException.getUnsupportedException("not unique");
-        }
-        if(!persistent && !create) {
-            throw DbException.getUnsupportedException("Non persistent index called with create==false");
         }
         if (columns.length > 1) {
             throw DbException.getUnsupportedException("can only do one column");
@@ -67,8 +47,8 @@ public class SpatialTreeIndex extends PageIndex implements SpatialIndex {
         if ((columns[0].sortType & SortOrder.NULLS_LAST) != 0) {
             throw DbException.getUnsupportedException("cannot do nulls last");
         }
+
         initBaseIndex(table, id, indexName, columns, indexType);
-        this.needRebuild = create;
         tableData = table;
         if (!database.isStarting()) {
             if (columns[0].column.getType() != Value.GEOMETRY) {
@@ -76,29 +56,13 @@ public class SpatialTreeIndex extends PageIndex implements SpatialIndex {
                         + columns[0].column.getCreateSQL());
             }
         }
-        if(!persistent) {
-            // Index in memory
-            store = MVStore.open(null);
-            treeMap =  store.openMap("spatialIndex",
-                    new MVRTreeMap.Builder<Long>());
-            store.setPageSize(1024);
-        } else {
-            if(id<0) {
-                throw DbException.getUnsupportedException("Persistent index with id<0");
-            }
-            MVTableEngine.initMVStore(session.getDatabase());
-            store = session.getDatabase().getMvStore().getStore();
-            /** Called after CREATE SPATIAL INDEX or
-             *  by {@link org.h2.store.PageStore#addMeta} */
-              treeMap =  store.openMap(MAP_PREFIX + getId(),
-                    new MVRTreeMap.Builder<Long>());
-        }
+
+        root = new STRtree(12);
     }
 
     @Override
     public void close(Session session) {
-        store.store();
-        store.close();
+        root = null;
         closed = true;
     }
 
@@ -107,15 +71,14 @@ public class SpatialTreeIndex extends PageIndex implements SpatialIndex {
         if (closed) {
             throw DbException.throwInternalError();
         }
-        treeMap.add(getEnvelope(row),row.getKey());
+        root.insert(getEnvelope(row), row.getKey());
+        rowCount++;
     }
-    
-    private SpatialKey getEnvelope(SearchRow row) {
+
+    private Envelope getEnvelope(SearchRow row) {
         Value v = row.getValue(columnIds[0]);
         Geometry g = ((ValueGeometry) v).getGeometry();
-        Envelope env = g.getEnvelopeInternal();
-        return new SpatialKey(row.getKey(),(float)env.getMinX(),(float)env.getMaxX(),
-                (float)env.getMinY(),(float)env.getMaxY());
+        return g.getEnvelopeInternal();
     }
 
     @Override
@@ -123,9 +86,10 @@ public class SpatialTreeIndex extends PageIndex implements SpatialIndex {
         if (closed) {
             throw DbException.throwInternalError();
         }
-        if (!treeMap.remove(getEnvelope(row),row.getKey())) {
+        if (!root.remove(getEnvelope(row), row.getKey())) {
             throw DbException.throwInternalError("row not found");
         }
+        rowCount--;
     }
 
     @Override
@@ -139,16 +103,26 @@ public class SpatialTreeIndex extends PageIndex implements SpatialIndex {
     }
 
     private Cursor find(Session session) {
-        return new ListCursor(treeMap.keySet().iterator(), tableData,session);
+        // FIXME: ideally I need external iterators, but let's see if we can get
+        // it working first
+        // FIXME: in the context of a spatial index, a query that uses ">" or "<" has no real meaning, so for now just ignore
+        // it and return all rows
+        List<Object> list = root.itemsTree();
+        return new ListCursor(list, true/*first*/,tableData,session);
     }
-    
+
     @SuppressWarnings("unchecked")
     @Override
     public Cursor findByGeometry(TableFilter filter, SearchRow intersection) {
-        if(intersection==null) {
-            return find(filter.getSession());
+        // FIXME: ideally I need external iterators, but let's see if we can get
+        // it working first
+        List<Object> list;
+        if (intersection != null) {
+            list = root.query(getEnvelope(intersection));
+        } else {
+            list = root.itemsTree();
         }
-        return new ListCursor(treeMap.findIntersectingKeys(getEnvelope(intersection)), tableData, filter.getSession());
+        return new ListCursor(list, true/*first*/, tableData, filter.getSession());
     }
 
     @Override
@@ -174,17 +148,15 @@ public class SpatialTreeIndex extends PageIndex implements SpatialIndex {
         return getCostRangeIndex(masks, tableData.getRowCountApproximation(), sortOrder);
     }
 
-
     @Override
     public void remove(Session session) {
-        if(!treeMap.isClosed()) {
-            treeMap.removeMap();
-        }
+        truncate(session);
     }
 
     @Override
     public void truncate(Session session) {
-        treeMap.clear();
+        root = null;
+        rowCount = 0;
     }
 
     @Override
@@ -194,7 +166,7 @@ public class SpatialTreeIndex extends PageIndex implements SpatialIndex {
 
     @Override
     public boolean needRebuild() {
-        return needRebuild;
+        return true;
     }
 
     @Override
@@ -207,65 +179,76 @@ public class SpatialTreeIndex extends PageIndex implements SpatialIndex {
         if (closed) {
             throw DbException.throwInternalError();
         }
-        if(!first) {
-            throw DbException.throwInternalError("Spatial Index can only be fetch by ascending order");
-        }
-        return find(session);
+
+        // FIXME: ideally I need external iterators, but let's see if we can get
+        // it working first
+        @SuppressWarnings("unchecked")
+        List<Object> list = root.itemsTree();
+        return new ListCursor(list, first,tableData,session);
     }
 
     @Override
     public long getRowCount(Session session) {
-        return treeMap.getSize();
+        return rowCount;
     }
 
     @Override
     public long getRowCountApproximation() {
-        return treeMap.getSize();
+        return rowCount;
     }
 
     @Override
     public long getDiskSpaceUsed() {
-        // TODO estimate disk space usage
         return 0;
     }
 
-    @Override
-    public void writeRowCount() {
-    }
-
     private static final class ListCursor implements Cursor {
-        private final Iterator<SpatialKey> it;
-        private SpatialKey current;
+        private final List<Object> rows;
+        private int index;
+        private Row current;
         private final RegularTable tableData;
         private Session session;
 
-        public ListCursor(Iterator<SpatialKey> it, RegularTable tableData, Session session) {
-            this.it = it;
+        public ListCursor(List<Object> rows, boolean first, RegularTable tableData, Session session) {
+            this.rows = rows;
+            this.index = first ? 0 : rows.size();
             this.tableData = tableData;
             this.session = session;
         }
 
         @Override
         public Row get() {
-            return tableData.getRow(session,current.getId());
+            return current;
         }
 
         @Override
         public SearchRow getSearchRow() {
-            return get();
+            return current;
         }
 
         @Override
         public boolean next() {
-            if(!it.hasNext()) {
-                return false;
+            current = null;
+            while(index < rows.size()) {
+                Object object = rows.get(index++);
+                if(object instanceof Long) {
+                    current = tableData.getRow(session, (Long)object);
+                    return true;
+                }
             }
-            current = it.next();
-            return true;
+            return false;
         }
 
         @Override
         public boolean previous() {
+            current = null;
+            while(index >= 0) {
+                Object object = rows.get(index--);
+                if(object instanceof Long) {
+                    current = tableData.getRow(session, (Long)object);
+                    return true;
+                }
+            }
             return false;
         }
 

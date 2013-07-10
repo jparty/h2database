@@ -31,6 +31,7 @@ import org.h2.index.PageBtreeIndex;
 import org.h2.index.PageDataIndex;
 import org.h2.index.PageDelegateIndex;
 import org.h2.index.ScanIndex;
+import org.h2.index.SpatialMemoryTreeIndex;
 import org.h2.index.SpatialTreeIndex;
 import org.h2.index.TreeIndex;
 import org.h2.message.DbException;
@@ -243,7 +244,7 @@ public class RegularTable extends TableBase {
             } else if (!indexType.isSpatial()) {
                 index = new TreeIndex(this, indexId, indexName, cols, indexType);
             } else {
-                index = new SpatialTreeIndex(this, indexId, indexName, cols, indexType, false, true, session);
+                index = new SpatialMemoryTreeIndex(this, indexId, indexName, cols, indexType);
             }
         }
         if (database.isMultiVersion()) {
