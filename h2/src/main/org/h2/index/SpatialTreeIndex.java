@@ -92,8 +92,11 @@ public class SpatialTreeIndex extends PageIndex implements SpatialIndex {
             store = session.getDatabase().getMvStore().getStore();
             /** Called after CREATE SPATIAL INDEX or
              *  by {@link org.h2.store.PageStore#addMeta} */
-              treeMap =  store.openMap(MAP_PREFIX + getId(),
+            treeMap =  store.openMap(MAP_PREFIX + getId(),
                     new MVRTreeMap.Builder<Long>());
+            if(treeMap.isEmpty()) {
+                needRebuild = true;
+            }
         }
     }
 
