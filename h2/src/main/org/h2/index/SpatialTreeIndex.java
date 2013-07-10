@@ -26,7 +26,7 @@ import com.vividsolutions.jts.geom.Envelope;
 import com.vividsolutions.jts.geom.Geometry;
 
 /**
- * This is an in-memory index based on a R-Tree.
+ * This is an index based on a MVR-TreeMap.
  * @author Noël Grandin
  * @author Nicolas Fortin IRSTV FR CNRS 24888
  */
@@ -36,9 +36,9 @@ public class SpatialTreeIndex extends PageIndex implements SpatialIndex {
     private static final String MAP_PREFIX  = "RTREE_";
 
     private final RegularTable tableData;
-    private long rowCount;
     private boolean closed;
-
+    private boolean needRebuild;
+    private boolean persistent;
     /**
      * Constructor.
      * @param table Table instance
@@ -49,9 +49,12 @@ public class SpatialTreeIndex extends PageIndex implements SpatialIndex {
      * @param persistent Persistent, can be used in-memory or stored in a file.
      */
     public SpatialTreeIndex(RegularTable table, int id, String indexName, IndexColumn[] columns, IndexType indexType,
-                            boolean persistent, Session session) {
+                            boolean persistent,boolean create, Session session) {
         if (indexType.isUnique()) {
             throw DbException.getUnsupportedException("not unique");
+        }
+        if(!persistent && !create) {
+            throw DbException.getUnsupportedException("Non persistent index called with create==false");
         }
         if (columns.length > 1) {
             throw DbException.getUnsupportedException("can only do one column");
@@ -65,8 +68,9 @@ public class SpatialTreeIndex extends PageIndex implements SpatialIndex {
         if ((columns[0].sortType & SortOrder.NULLS_LAST) != 0) {
             throw DbException.getUnsupportedException("cannot do nulls last");
         }
-
         initBaseIndex(table, id, indexName, columns, indexType);
+        this.needRebuild = create;
+        this.persistent = persistent;
         tableData = table;
         if (!database.isStarting()) {
             if (columns[0].column.getType() != Value.GEOMETRY) {
@@ -79,6 +83,7 @@ public class SpatialTreeIndex extends PageIndex implements SpatialIndex {
             store = MVStore.open(null);
             treeMap =  store.openMap("spatialIndex",
                     new MVRTreeMap.Builder<Long>());
+            store.setPageSize(1024);
         } else {
             if(id<0) {
                 throw DbException.getUnsupportedException("Persistent index with id<0");
@@ -87,14 +92,18 @@ public class SpatialTreeIndex extends PageIndex implements SpatialIndex {
             store = session.getDatabase().getMvStore().getStore();
             /** Called after CREATE SPATIAL INDEX or
              *  by {@link org.h2.store.PageStore#addMeta} */
-            treeMap =  store.openMap(MAP_PREFIX + getId(),
+              treeMap =  store.openMap(MAP_PREFIX + getId(),
                     new MVRTreeMap.Builder<Long>());
         }
     }
 
     @Override
     public void close(Session session) {
-        store.close();
+        if(persistent) {
+            store.store();
+        } else{
+            store.close();
+        }
         closed = true;
     }
 
@@ -104,7 +113,6 @@ public class SpatialTreeIndex extends PageIndex implements SpatialIndex {
             throw DbException.throwInternalError();
         }
         treeMap.add(getEnvelope(row),row.getKey());
-        rowCount++;
     }
     
     private SpatialKey getEnvelope(SearchRow row) {
@@ -123,7 +131,6 @@ public class SpatialTreeIndex extends PageIndex implements SpatialIndex {
         if (!treeMap.remove(getEnvelope(row),row.getKey())) {
             throw DbException.throwInternalError("row not found");
         }
-        rowCount--;
     }
 
     @Override
@@ -192,7 +199,7 @@ public class SpatialTreeIndex extends PageIndex implements SpatialIndex {
 
     @Override
     public boolean needRebuild() {
-        return true;
+        return needRebuild;
     }
 
     @Override
@@ -213,12 +220,12 @@ public class SpatialTreeIndex extends PageIndex implements SpatialIndex {
 
     @Override
     public long getRowCount(Session session) {
-        return rowCount;
+        return treeMap.getSize();
     }
 
     @Override
     public long getRowCountApproximation() {
-        return rowCount;
+        return treeMap.getSize();
     }
 
     @Override
@@ -229,7 +236,6 @@ public class SpatialTreeIndex extends PageIndex implements SpatialIndex {
 
     @Override
     public void writeRowCount() {
-        //TODO
     }
 
     private static final class ListCursor implements Cursor {
