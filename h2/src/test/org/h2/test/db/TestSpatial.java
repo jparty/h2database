@@ -39,12 +39,11 @@ public class TestSpatial extends TestBase {
     @Override
     public void test() throws SQLException {
         deleteDb("spatial");
-        //testSpatialValues();
-        //testOverlap();
-        //testNotOverlap();
-        //testMemorySpatialIndex();
-        //testPersistentSpatialIndex();
-        tempTestPerformance();
+        testSpatialValues();
+        testOverlap();
+        testNotOverlap();
+        testMemorySpatialIndex();
+        testPersistentSpatialIndex();
         deleteDb("spatial");
     }
 
@@ -257,29 +256,4 @@ public class TestSpatial extends TestBase {
         conn.close();
         deleteDb("spatialIndex");
     }
-
-    private void tempTestPerformance() throws SQLException {
-        deleteDb("spatialProfiling");
-        Connection conn = getConnection("spatialProfiling");
-        Statement stat = conn.createStatement();
-        println("import table");
-        stat.execute("create table routes(the_geom Geometry, ID VARCHAR(30) primary key, NATURE VARCHAR(30)," +
-                " LARGEUR double) as select the_geom::Geometry the_geom,ID,NATURE,LARGEUR " +
-                "from CSVREAD('/mnt/stock/backport/fortin/routes2.csv');\n" +
-                "create table zonage (NUMERO int primary key, the_geom GEOMETRY, TYPE VARCHAR(40), NOM_COM VARCHAR(40)," +
-                " EPCI VARCHAR(40), NOMAU VARCHAR(40)) as select NUMERO, the_geom::geometry, type,nom_com,epci,nomau" +
-                " from CSVREAD('/home/fortin/zonage_pv.csv');");
-
-        stat.execute("create spatial index idx on ROUTES(the_geom);");
-        stat.execute("create spatial index idx2 on zonage(the_geom);");
-        System.out.println("do select");
-        long deb = System.currentTimeMillis();
-        ResultSet rs = stat.executeQuery("select ZONAGE.NOM_COM,ZONAGE.NUMERO, COUNT(ROUTES.ID) roadcount from ZONAGE, ROUTES WHERE ZONAGE.the_geom && ROUTES.the_geom GROUP BY ZONAGE.NOM_COM,ZONAGE.NUMERO ORDER BY ZONAGE.NOM_COM,ZONAGE.NUMERO");
-        while(rs.next()) {
-            System.out.println(rs.getString("NOM_COM")+" "+rs.getString("NUMERO")+" "+rs.getString("ROADCOUNT"));
-        }
-        System.out.println("Done in "+(System.currentTimeMillis()-deb)+" ms");
-        conn.close();
-    }
-
 }
