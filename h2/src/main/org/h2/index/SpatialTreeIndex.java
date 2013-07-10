@@ -38,6 +38,7 @@ public class SpatialTreeIndex extends PageIndex implements SpatialIndex {
     private final RegularTable tableData;
     private boolean closed;
     private boolean needRebuild;
+    private boolean persistent;
     /**
      * Constructor.
      * @param table Table instance
@@ -69,6 +70,7 @@ public class SpatialTreeIndex extends PageIndex implements SpatialIndex {
         }
         initBaseIndex(table, id, indexName, columns, indexType);
         this.needRebuild = create;
+        this.persistent = persistent;
         tableData = table;
         if (!database.isStarting()) {
             if (columns[0].column.getType() != Value.GEOMETRY) {
@@ -97,8 +99,11 @@ public class SpatialTreeIndex extends PageIndex implements SpatialIndex {
 
     @Override
     public void close(Session session) {
-        store.store();
-        store.close();
+        if(persistent) {
+            store.store();
+        } else{
+            store.close();
+        }
         closed = true;
     }
 

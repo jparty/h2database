@@ -176,10 +176,6 @@ public class IndexCursor implements Cursor {
     private SearchRow getSpatialSearchRow(SearchRow row, int columnId, Value v) {
         if (row == null) {
             row = table.getTemplateRow();
-        } else {
-            // Merge the two envelopes
-            ValueGeometry vg = (ValueGeometry) row.getValue(columnId);
-            v = ((ValueGeometry)v).envelopeUnion(vg);
         }
         if (columnId < 0) {
             row.setKey(v.getLong());

@@ -39,12 +39,12 @@ public class TestSpatial extends TestBase {
     @Override
     public void test() throws SQLException {
         deleteDb("spatial");
-        testSpatialValues();
-        testOverlap();
-        testNotOverlap();
-        testMemorySpatialIndex();
-        testPersistentSpatialIndex();
-        //tempTestPerformance();
+        //testSpatialValues();
+        //testOverlap();
+        //testNotOverlap();
+        //testMemorySpatialIndex();
+        //testPersistentSpatialIndex();
+        tempTestPerformance();
         deleteDb("spatial");
     }
 
@@ -263,10 +263,10 @@ public class TestSpatial extends TestBase {
         Connection conn = getConnection("spatialProfiling");
         Statement stat = conn.createStatement();
         println("import table");
-        stat.execute("create memory table routes(the_geom Geometry, ID VARCHAR(30) primary key, NATURE VARCHAR(30)," +
+        stat.execute("create table routes(the_geom Geometry, ID VARCHAR(30) primary key, NATURE VARCHAR(30)," +
                 " LARGEUR double) as select the_geom::Geometry the_geom,ID,NATURE,LARGEUR " +
                 "from CSVREAD('/mnt/stock/backport/fortin/routes2.csv');\n" +
-                "create memory table zonage (NUMERO int primary key, the_geom GEOMETRY, TYPE VARCHAR(40), NOM_COM VARCHAR(40)," +
+                "create table zonage (NUMERO int primary key, the_geom GEOMETRY, TYPE VARCHAR(40), NOM_COM VARCHAR(40)," +
                 " EPCI VARCHAR(40), NOMAU VARCHAR(40)) as select NUMERO, the_geom::geometry, type,nom_com,epci,nomau" +
                 " from CSVREAD('/home/fortin/zonage_pv.csv');");
 
