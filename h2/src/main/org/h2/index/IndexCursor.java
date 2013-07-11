@@ -74,7 +74,7 @@ public class IndexCursor implements Cursor {
     public void find(Session s, ArrayList<IndexCondition> indexConditions) {
         this.session = s;
         alwaysFalse = false;
-        start = end = null;
+        start = end = intersects = null;
         inList = null;
         inColumn = null;
         inResult = null;
@@ -176,6 +176,10 @@ public class IndexCursor implements Cursor {
     private SearchRow getSpatialSearchRow(SearchRow row, int columnId, Value v) {
         if (row == null) {
             row = table.getTemplateRow();
+        } else if(row.getValue(columnId)!=null) {
+            // Merge the two envelopes
+            ValueGeometry vg = (ValueGeometry) row.getValue(columnId);
+            v = ((ValueGeometry)v).envelopeUnion(vg);
         }
         if (columnId < 0) {
             row.setKey(v.getLong());
