@@ -31,8 +31,8 @@ import com.vividsolutions.jts.geom.Geometry;
  * @author Nicolas Fortin IRSTV FR CNRS 24888
  */
 public class SpatialTreeIndex extends PageIndex implements SpatialIndex {
-    private MVRTreeMap<Long> treeMap;
-    private MVStore store;
+    private final MVRTreeMap<Long> treeMap;
+    private final MVStore store;
     private static final String MAP_PREFIX  = "RTREE_";
 
     private final RegularTable tableData;
@@ -115,7 +115,9 @@ public class SpatialTreeIndex extends PageIndex implements SpatialIndex {
         if (closed) {
             throw DbException.throwInternalError();
         }
-        treeMap.add(getEnvelope(row),row.getKey());
+        synchronized (store) {
+            treeMap.add(getEnvelope(row),row.getKey());
+        }
     }
     
     private SpatialKey getEnvelope(SearchRow row) {
@@ -131,8 +133,10 @@ public class SpatialTreeIndex extends PageIndex implements SpatialIndex {
         if (closed) {
             throw DbException.throwInternalError();
         }
-        if (!treeMap.remove(getEnvelope(row),row.getKey())) {
-            throw DbException.throwInternalError("row not found");
+        synchronized (store) {
+            if (!treeMap.remove(getEnvelope(row),row.getKey())) {
+                throw DbException.throwInternalError("row not found");
+            }
         }
     }
 
@@ -186,13 +190,17 @@ public class SpatialTreeIndex extends PageIndex implements SpatialIndex {
     @Override
     public void remove(Session session) {
         if(!treeMap.isClosed()) {
-            treeMap.removeMap();
+            synchronized (store) {
+                treeMap.removeMap();
+            }
         }
     }
 
     @Override
     public void truncate(Session session) {
-        treeMap.clear();
+        synchronized (store) {
+            treeMap.clear();
+        }
     }
 
     @Override
