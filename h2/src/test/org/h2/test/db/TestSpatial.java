@@ -17,6 +17,8 @@ import java.util.Set;
 
 import com.vividsolutions.jts.geom.Envelope;
 import com.vividsolutions.jts.geom.Geometry;
+import com.vividsolutions.jts.io.ParseException;
+import com.vividsolutions.jts.io.WKTReader;
 import org.h2.engine.Database;
 import org.h2.engine.Session;
 import org.h2.jdbc.JdbcConnection;
@@ -45,15 +47,15 @@ public class TestSpatial extends TestBase {
     @Override
     public void test() throws SQLException {
         deleteDb("spatial");
-//        testSpatialValues();
-//        testOverlap();
-//        testNotOverlap();
-//        testMemorySpatialIndex();
-//        testPersistentSpatialIndex();
-//        testSpatialIndexQueryMultipleTable();
-//        testIndexTransaction();
-
-        testPersistentSpatialIndex2();
+        testSpatialValues();
+        testOverlap();
+        testNotOverlap();
+        testMemorySpatialIndex();
+        testPersistentSpatialIndex();
+        testSpatialIndexQueryMultipleTable();
+        testIndexTransaction();
+        testJavaAlias();
+        //testPersistentSpatialIndex2();
         deleteDb("spatial");
     }
 
@@ -372,7 +374,43 @@ public class TestSpatial extends TestBase {
         deleteDb("spatialIndex");
     }
 
+    /**
+     * Test java alias with Geometry type.
+     */
+    private void testJavaAlias() throws SQLException {
+        deleteDb("spatialIndex");
+        Connection conn = getConnection("spatialIndex");
+        try {
+            Statement stat = conn.createStatement();
+            stat.execute("CREATE ALIAS T_GEOMFROMTEXT FOR \"" + TestSpatial.class.getName() + ".geomFromText\"");
+            stat.execute("create table test(id int primary key auto_increment, the_geom geometry)");
+            stat.execute("insert into test(the_geom) values(T_GEOMFROMTEXT('POLYGON ((62 48, 84 48, 84 42, 56 34, 62 48))',1488))");
+            stat.execute("DROP ALIAS T_GEOMFROMTEXT");
+            ResultSet rs = stat.executeQuery("select the_geom from test");
+            assertTrue(rs.next());
+            assertEquals("POLYGON ((62 48, 84 48, 84 42, 56 34, 62 48))", rs.getObject(1).toString());
+        } finally {
+            conn.close();
+        }
+        deleteDb("spatialIndex");
+    }
 
+    /**
+     *
+     * @param text Geometry in Well Known Text
+     * @param srid Projection ID
+     * @return Geometry object
+     */
+    public static Geometry geomFromText(String text, int srid) throws SQLException {
+        WKTReader wktReader = new WKTReader();
+        try {
+            Geometry geom = wktReader.read(text);
+            geom.setSRID(srid);
+            return geom;
+        } catch (ParseException ex) {
+            throw new SQLException(ex);
+        }
+    }
     /**
      * Not really a test case but show that something go crazy (in mvstore) after some seconds.
      * @throws SQLException
