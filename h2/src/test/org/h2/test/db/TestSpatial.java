@@ -393,10 +393,11 @@ public class TestSpatial extends TestBase {
             stat.execute("create spatial index on test(the_geom)");
             Database db = ((Session)((JdbcConnection) conn).getSession()).getDatabase();
             MVStore store = db.getMvStore().getStore();
-            while(store.getUnsavedPageCount()!=0) {
+            int cpt=0;
+            while(cpt<46) {
                 try {
-                    // First it shows 610, then a couple of 5, finally a 688 with a trace in spatial_pers.trace.db
-                    System.out.println("store.getUnsavedPageCount()=="+store.getUnsavedPageCount());
+                    // First it shows 610, then 5 until cpt==44, finally at cpt==45 it shows an unsaved 688 with a trace in spatial_pers.trace.db
+                    System.out.println((cpt++)+" store.getUnsavedPageCount()=="+store.getUnsavedPageCount());
                     Thread.sleep(1000);
                 } catch (InterruptedException ex) {
                     throw new SQLException(ex);
