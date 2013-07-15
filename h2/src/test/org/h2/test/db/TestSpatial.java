@@ -59,6 +59,7 @@ public class TestSpatial extends TestBase {
         testIndexTransaction();
         testJavaAlias();
         testJavaAliasTableFunction();
+        testEmptyGeometryCollection();
         //testPersistentSpatialIndex2();
         deleteDb("spatial");
     }
@@ -493,6 +494,28 @@ public class TestSpatial extends TestBase {
             }
         } finally {
             // Close the database
+            conn.close();
+        }
+    }
+    private void testEmptyGeometryCollection() throws SQLException {
+        deleteDb("spatial");
+        Connection conn = getConnection("spatial");
+        try {
+            Statement stat = conn.createStatement();
+            stat.execute("create table test(id int primary key, poly geometry)");
+            stat.execute("insert into test values(1, 'GEOMETRYCOLLECTION EMPTY')");
+            stat.execute("insert into test values(2, 'GEOMETRYCOLLECTION EMPTY')");
+            stat.execute("insert into test values(3, 'GEOMETRYCOLLECTION EMPTY')");
+            ResultSet rs = stat.executeQuery("select * from test");
+            assertTrue(rs.next());
+            assertEquals("GEOMETRYCOLLECTION EMPTY",rs.getString("poly"));
+            assertTrue(rs.next());
+            assertEquals("GEOMETRYCOLLECTION EMPTY",rs.getString("poly"));
+            assertTrue(rs.next());
+            assertEquals("GEOMETRYCOLLECTION EMPTY",rs.getString("poly"));
+            assertFalse(rs.next());
+            stat.execute("drop table test");
+        } finally {
             conn.close();
         }
     }
