@@ -11,6 +11,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Savepoint;
 import java.sql.Statement;
+import java.sql.Types;
 import java.util.HashSet;
 import java.util.Random;
 import java.util.Set;
@@ -28,6 +29,8 @@ import org.h2.test.TestBase;
 import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.GeometryFactory;
 import com.vividsolutions.jts.geom.Polygon;
+import org.h2.tools.SimpleResultSet;
+import org.h2.tools.SimpleRowSource;
 import org.h2.value.ValueGeometry;
 
 /**
@@ -55,6 +58,7 @@ public class TestSpatial extends TestBase {
         testSpatialIndexQueryMultipleTable();
         testIndexTransaction();
         testJavaAlias();
+        testJavaAliasTableFunction();
         //testPersistentSpatialIndex2();
         deleteDb("spatial");
     }
@@ -393,6 +397,53 @@ public class TestSpatial extends TestBase {
             conn.close();
         }
         deleteDb("spatialIndex");
+    }
+
+    /**
+     * Test java alias with Geometry type.
+     */
+    private void testJavaAliasTableFunction() throws SQLException {
+        deleteDb("spatialIndex");
+        Connection conn = getConnection("spatialIndex");
+        try {
+            Statement stat = conn.createStatement();
+            stat.execute("CREATE ALIAS T_RANDOM_GEOM_TABLE FOR \"" + TestSpatial.class.getName() + ".getRandomGeometryTable\"");
+            stat.execute("create table test as select * from T_RANDOM_GEOM_TABLE(42,20,-100,100,-100,100,4)");
+            stat.execute("DROP ALIAS T_RANDOM_GEOM_TABLE");
+            ResultSet rs = stat.executeQuery("select count(*) cpt from test");
+            assertTrue(rs.next());
+            assertEquals(20, rs.getInt(1));
+        } finally {
+            conn.close();
+        }
+        deleteDb("spatialIndex");
+    }
+
+
+    public static ResultSet getRandomGeometryTable(final long seed,final long rowCount, final double minX,final double maxX,final double minY, final double maxY, final double maxLength) {
+        SimpleResultSet rs = new SimpleResultSet(new SimpleRowSource() {
+            private final Random rnd = new Random(seed);
+            private int cpt = 0;
+            @Override
+            public Object[] readRow() throws SQLException {
+                if(cpt++<rowCount) {
+                    return new Object[]{getRandomGeometry(rnd,minX,maxX,minY,maxY,maxLength)};  //To change body of implemented methods use File | Settings | File Templates.
+                } else {
+                    return null;
+                }
+            }
+
+            @Override
+            public void close() {
+            }
+
+            @Override
+            public void reset() throws SQLException {
+                rnd.setSeed(seed);
+            }
+        });
+        rs.addColumn("the_geom", Types.OTHER,Integer.MAX_VALUE,0);
+        return rs;
     }
 
     /**
