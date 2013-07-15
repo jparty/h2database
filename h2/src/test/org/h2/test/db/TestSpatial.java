@@ -40,13 +40,15 @@ public class TestSpatial extends TestBase {
     @Override
     public void test() throws SQLException {
         deleteDb("spatial");
-        testSpatialValues();
-        testOverlap();
-        testNotOverlap();
-        testMemorySpatialIndex();
-        testPersistentSpatialIndex();
-        testSpatialIndexQueryMultipleTable();
-        testIndexTransaction();
+//        testSpatialValues();
+//        testOverlap();
+//        testNotOverlap();
+//        testMemorySpatialIndex();
+//        testPersistentSpatialIndex();
+//        testSpatialIndexQueryMultipleTable();
+//        testIndexTransaction();
+
+        testPersistentSpatialIndex2();
         deleteDb("spatial");
     }
 
@@ -363,5 +365,39 @@ public class TestSpatial extends TestBase {
         testRandom(conn, 44, 3500);
         conn.close();
         deleteDb("spatialIndex");
+    }
+
+
+
+    private void testPersistentSpatialIndex2() throws SQLException {
+        deleteDb("spatial_pers");
+        final long count = 150000;
+        Connection conn = getConnection("spatial_pers");
+        try {
+            Statement stat = conn.createStatement();
+            stat.execute("create table test(id int primary key auto_increment, the_geom geometry)");
+            PreparedStatement ps = conn.prepareStatement("insert into test(the_geom) values(?)");
+            Random rnd = new Random(44);
+            for(int i=0;i<count;i++) {
+                ps.setObject(1,getRandomGeometry(rnd,0,100,-50,50,3));
+                ps.execute();
+            }
+            stat.execute("create spatial index on test(the_geom)");
+        } finally {
+            // Close the database
+            conn.close();
+        }
+        conn = getConnection("spatial_pers");
+        try {
+            Statement stat = conn.createStatement();
+            ResultSet rs = stat.executeQuery("select count(*) cpt from test");
+            assertTrue(rs.next());
+            assertEquals(count,rs.getInt("cpt"));
+            assertFalse(rs.next());
+            stat.execute("drop table test");
+        } finally {
+            conn.close();
+        }
+
     }
 }
