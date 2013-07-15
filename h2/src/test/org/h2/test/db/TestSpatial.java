@@ -17,6 +17,11 @@ import java.util.Set;
 
 import com.vividsolutions.jts.geom.Envelope;
 import com.vividsolutions.jts.geom.Geometry;
+import org.h2.engine.Database;
+import org.h2.engine.Session;
+import org.h2.jdbc.JdbcConnection;
+import org.h2.mvstore.MVStore;
+import org.h2.mvstore.db.MVTableEngine;
 import org.h2.test.TestBase;
 import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.GeometryFactory;
@@ -368,7 +373,10 @@ public class TestSpatial extends TestBase {
     }
 
 
-
+    /**
+     * Not really a test case but show that something go crazy (in mvstore) after some seconds.
+     * @throws SQLException
+     */
     private void testPersistentSpatialIndex2() throws SQLException {
         deleteDb("spatial_pers");
         final long count = 150000;
@@ -383,21 +391,20 @@ public class TestSpatial extends TestBase {
                 ps.execute();
             }
             stat.execute("create spatial index on test(the_geom)");
+            Database db = ((Session)((JdbcConnection) conn).getSession()).getDatabase();
+            MVStore store = db.getMvStore().getStore();
+            while(store.getUnsavedPageCount()!=0) {
+                try {
+                    // First it shows 610, then a couple of 5, finally a 688 with a trace in spatial_pers.trace.db
+                    System.out.println("store.getUnsavedPageCount()=="+store.getUnsavedPageCount());
+                    Thread.sleep(1000);
+                } catch (InterruptedException ex) {
+                    throw new SQLException(ex);
+                }
+            }
         } finally {
             // Close the database
             conn.close();
         }
-        conn = getConnection("spatial_pers");
-        try {
-            Statement stat = conn.createStatement();
-            ResultSet rs = stat.executeQuery("select count(*) cpt from test");
-            assertTrue(rs.next());
-            assertEquals(count,rs.getInt("cpt"));
-            assertFalse(rs.next());
-            stat.execute("drop table test");
-        } finally {
-            conn.close();
-        }
-
     }
 }
