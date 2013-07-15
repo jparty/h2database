@@ -90,14 +90,12 @@ public class SpatialTreeIndex extends PageIndex implements SpatialIndex {
             }
             MVTableEngine.initMVStore(session.getDatabase());
             store = session.getDatabase().getMvStore().getStore();
-            synchronized (store) {
-                /** Called after CREATE SPATIAL INDEX or
-                 *  by {@link org.h2.store.PageStore#addMeta} */
-                treeMap =  store.openMap(MAP_PREFIX + getId(),
-                        new MVRTreeMap.Builder<Long>());
-                if(treeMap.isEmpty()) {
-                    needRebuild = true;
-                }
+            /** Called after CREATE SPATIAL INDEX or
+             *  by {@link org.h2.store.PageStore#addMeta} */
+            treeMap =  store.openMap(MAP_PREFIX + getId(),
+                    new MVRTreeMap.Builder<Long>());
+            if(treeMap.isEmpty()) {
+                needRebuild = true;
             }
         }
     }
@@ -105,9 +103,7 @@ public class SpatialTreeIndex extends PageIndex implements SpatialIndex {
     @Override
     public void close(Session session) {
         if(persistent) {
-            synchronized (store) {
-                store.store();
-            }
+            store.store();
         } else{
             store.close();
         }
@@ -119,9 +115,7 @@ public class SpatialTreeIndex extends PageIndex implements SpatialIndex {
         if (closed) {
             throw DbException.throwInternalError();
         }
-        synchronized (store) {
-            treeMap.add(getEnvelope(row),row.getKey());
-        }
+        treeMap.add(getEnvelope(row),row.getKey());
     }
     
     private SpatialKey getEnvelope(SearchRow row) {
@@ -137,10 +131,8 @@ public class SpatialTreeIndex extends PageIndex implements SpatialIndex {
         if (closed) {
             throw DbException.throwInternalError();
         }
-        synchronized (store) {
-            if (!treeMap.remove(getEnvelope(row),row.getKey())) {
-                throw DbException.throwInternalError("row not found");
-            }
+        if (!treeMap.remove(getEnvelope(row),row.getKey())) {
+            throw DbException.throwInternalError("row not found");
         }
     }
 
@@ -194,17 +186,13 @@ public class SpatialTreeIndex extends PageIndex implements SpatialIndex {
     @Override
     public void remove(Session session) {
         if(!treeMap.isClosed()) {
-            synchronized (store) {
-                treeMap.removeMap();
-            }
+            treeMap.removeMap();
         }
     }
 
     @Override
     public void truncate(Session session) {
-        synchronized (store) {
-            treeMap.clear();
-        }
+        treeMap.clear();
     }
 
     @Override
