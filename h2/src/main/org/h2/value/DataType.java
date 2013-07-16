@@ -960,12 +960,19 @@ public class DataType {
             return ValueJavaObject.getNoCopy(x, null);
         }
     }
-    
-    private static boolean isGeometry(Object x) {
+
+    private static boolean isGeometry(Class<?> x) {
         if (x == null || GEOMETRY_CLASS == null) {
             return false;
         }
-        return GEOMETRY_CLASS.isAssignableFrom(x.getClass());
+        return GEOMETRY_CLASS.isAssignableFrom(x);
+    }
+    
+    private static boolean isGeometry(Object x) {
+        if (x == null) {
+            return false;
+        }
+        return isGeometry(x.getClass());
     }
 
     /**

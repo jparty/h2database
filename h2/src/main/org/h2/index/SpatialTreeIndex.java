@@ -88,7 +88,7 @@ public class SpatialTreeIndex extends PageIndex implements SpatialIndex {
             if(id<0) {
                 throw DbException.getUnsupportedException("Persistent index with id<0");
             }
-            MVTableEngine.initMVStore(session.getDatabase());
+            MVTableEngine.init(session.getDatabase());
             store = session.getDatabase().getMvStore().getStore();
             /** Called after CREATE SPATIAL INDEX or
              *  by {@link org.h2.store.PageStore#addMeta} */
