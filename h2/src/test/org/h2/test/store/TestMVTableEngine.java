@@ -45,7 +45,7 @@ public class TestMVTableEngine extends TestBase {
 
     @Override
     public void test() throws Exception {
-        // testSpeed();
+        // testShrinkDatabaseFile();
         testRecover();
         testSeparateKey();
         testRollback();
@@ -64,65 +64,35 @@ public class TestMVTableEngine extends TestBase {
         testSimple();
     }
 
-    private void testSpeed() throws Exception {
-        String dbName;
-        for (int i = 0; i < 10; i++) {
-            dbName = "mvstore";
-            dbName += ";LOCK_MODE=0";
-//            dbName += ";LOG=0";
-            testSpeed(dbName);
-int test;
-//Profiler prof = new Profiler().startCollecting();
-            dbName = "mvstore" +
-                    ";DEFAULT_TABLE_ENGINE=org.h2.mvstore.db.MVTableEngine";
-            dbName += ";LOCK_MODE=0";
-            dbName += ";LOG=0";
-            testSpeed(dbName);
-//System.out.println(prof.getTop(10));
-        }
+    private void testShrinkDatabaseFile() throws Exception {
         FileUtils.deleteRecursive(getBaseDir(), true);
-    }
-
-    private void testSpeed(String dbName) throws Exception {
-        FileUtils.deleteRecursive(getBaseDir(), true);
+        String dbName = "mvstore" +
+                ";MV_STORE=TRUE";
         Connection conn;
         Statement stat;
-        String url = getURL(dbName, true);
-        String user = getUser();
-        String password = getPassword();
-
-//Profiler prof = new Profiler();
-//prof.sumClasses=true;
-//prof.startCollecting();
-
-        conn = DriverManager.getConnection(url, user, password);
-        stat = conn.createStatement();
-        long time = System.currentTimeMillis();
-//        stat.execute(
-//                "create table test(id int primary key, name varchar(255))" +
-//                "as select x, 'Hello World' from system_range(1, 200000)");
-        stat.execute("create table test(id int primary key, name varchar)");
-        PreparedStatement prep = conn
-                .prepareStatement("insert into test values(?, ?)");
-
-        prep.setString(2, new String(new char[10]).replace((char) 0, 'x'));
-//        for (int i = 0; i < 20000; i++) {
-        for (int i = 0; i < 800000; i++) {
-
-            prep.setInt(1, i);
-            prep.execute();
+        long maxSize = 0;
+        for (int i = 0; i < 20; i++) {
+            conn = getConnection(dbName);
+            stat = conn.createStatement();
+            stat.execute("create table test(id int primary key, data varchar)");
+            stat.execute("insert into test select x, space(1000) from system_range(1, 1000)");
+            stat.execute("drop table test");
+            conn.close();
+            long size = FileUtils.size(getBaseDir() + "/mvstore"
+                    + Constants.SUFFIX_MV_FILE);
+            if (i < 10) {
+                maxSize = (int) (Math.max(size, maxSize) * 1.1);
+            } else if (size > maxSize) {
+                fail(i + " size: " + size + " max: " + maxSize);
+            }
         }
-        System.out.println((System.currentTimeMillis() - time) + " " + dbName + " before");
-        conn.close();
-//System.out.println(prof.getTop(10));
-        System.out.println((System.currentTimeMillis() - time) + " " + dbName + " after");
     }
 
     private void testRecover() throws Exception {
         FileUtils.deleteRecursive(getBaseDir(), true);
         Connection conn;
         Statement stat;
-        String url = "mvstore;default_table_engine=org.h2.mvstore.db.MVTableEngine";
+        String url = "mvstore;MV_STORE=TRUE";
         url = getURL(url, true);
         conn = getConnection(url);
         stat = conn.createStatement();
@@ -152,7 +122,7 @@ int test;
         FileUtils.deleteRecursive(getBaseDir(), true);
         Connection conn;
         Statement stat;
-        String url = "mvstore;default_table_engine=org.h2.mvstore.db.MVTableEngine";
+        String url = "mvstore;MV_STORE=TRUE";
         conn = getConnection(url);
         stat = conn.createStatement();
         stat.execute("create table test(id identity)");
@@ -168,7 +138,7 @@ int test;
         Connection conn;
         Statement stat;
 
-        String url = "mvstore;default_table_engine=org.h2.mvstore.db.MVTableEngine";
+        String url = "mvstore;MV_STORE=TRUE";
 
         conn = getConnection(url);
         stat = conn.createStatement();
@@ -194,8 +164,8 @@ int test;
         Connection conn;
         Statement stat;
 
-        String url = "mvstore;default_table_engine=org.h2.mvstore.db.MVTableEngine";
-        String url2 = "mvstore2;default_table_engine=org.h2.mvstore.db.MVTableEngine";
+        String url = "mvstore;MV_STORE=TRUE";
+        String url2 = "mvstore2;MV_STORE=TRUE";
 
         conn = getConnection(url);
         stat = conn.createStatement();
@@ -206,7 +176,7 @@ int test;
         stat.execute("insert into test values(1)");
         stat.execute("shutdown immediately");
         JdbcUtils.closeSilently(conn);
-
+        
         conn = getConnection(url);
         stat = conn.createStatement();
         ResultSet rs = stat.executeQuery("select row_count_estimate " +
@@ -252,7 +222,7 @@ int test;
         Connection conn;
         Statement stat;
 
-        conn = getConnection("mvstore;default_table_engine=org.h2.mvstore.db.MVTableEngine");
+        conn = getConnection("mvstore;MV_STORE=TRUE");
 
         stat = conn.createStatement();
         stat.execute("create table test(id int, parent int " +
@@ -394,7 +364,7 @@ int test;
     private void testBlob() throws SQLException, IOException {
         FileUtils.deleteRecursive(getBaseDir(), true);
         String dbName = "mvstore" +
-                ";DEFAULT_TABLE_ENGINE=org.h2.mvstore.db.MVTableEngine";
+                ";MV_STORE=TRUE";
         Connection conn;
         Statement stat;
         conn = getConnection(dbName);
@@ -422,7 +392,7 @@ int test;
     private void testEncryption() throws Exception {
         FileUtils.deleteRecursive(getBaseDir(), true);
         String dbName = "mvstore" +
-                ";DEFAULT_TABLE_ENGINE=org.h2.mvstore.db.MVTableEngine";
+                ";MV_STORE=TRUE";
         Connection conn;
         Statement stat;
         String url = getURL(dbName + ";CIPHER=AES", true);
@@ -443,7 +413,7 @@ int test;
     private void testExclusiveLock() throws Exception {
         FileUtils.deleteRecursive(getBaseDir(), true);
         String dbName = "mvstore" +
-                ";DEFAULT_TABLE_ENGINE=org.h2.mvstore.db.MVTableEngine";
+                ";MV_STORE=TRUE";
         Connection conn, conn2;
         Statement stat, stat2;
         conn = getConnection(dbName);
@@ -467,7 +437,7 @@ int test;
     private void testReadOnly() throws Exception {
         FileUtils.deleteRecursive(getBaseDir(), true);
         String dbName = "mvstore" +
-                ";DEFAULT_TABLE_ENGINE=org.h2.mvstore.db.MVTableEngine";
+                ";MV_STORE=TRUE";
         Connection conn;
         Statement stat;
         conn = getConnection(dbName);
@@ -485,7 +455,7 @@ int test;
     private void testReuseDiskSpace() throws Exception {
         FileUtils.deleteRecursive(getBaseDir(), true);
         String dbName = "mvstore" +
-                ";DEFAULT_TABLE_ENGINE=org.h2.mvstore.db.MVTableEngine";
+                ";MV_STORE=TRUE";
         Connection conn;
         Statement stat;
         long maxSize = 0;
@@ -511,7 +481,7 @@ int test;
     private void testDataTypes() throws Exception {
         FileUtils.deleteRecursive(getBaseDir(), true);
         String dbName = "mvstore" +
-                ";DEFAULT_TABLE_ENGINE=org.h2.mvstore.db.MVTableEngine";
+                ";MV_STORE=TRUE";
         Connection conn = getConnection(dbName);
         Statement stat = conn.createStatement();
 
@@ -661,7 +631,7 @@ int test;
     private void testLocking() throws Exception {
         FileUtils.deleteRecursive(getBaseDir(), true);
         String dbName = "mvstore" +
-                ";DEFAULT_TABLE_ENGINE=org.h2.mvstore.db.MVTableEngine";
+                ";MV_STORE=TRUE";
         Connection conn = getConnection(dbName);
         Statement stat = conn.createStatement();
         stat.execute("set lock_timeout 1000");
@@ -698,7 +668,7 @@ int test;
     private void testSimple() throws Exception {
         FileUtils.deleteRecursive(getBaseDir(), true);
         String dbName = "mvstore" +
-                ";DEFAULT_TABLE_ENGINE=org.h2.mvstore.db.MVTableEngine";
+                ";MV_STORE=TRUE";
         Connection conn = getConnection(dbName);
         Statement stat = conn.createStatement();
         // create table test(id int, name varchar)

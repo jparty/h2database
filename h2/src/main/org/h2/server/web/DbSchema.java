@@ -64,7 +64,9 @@ public class DbSchema {
         this.name = name;
         this.quotedName =  contents.quoteIdentifier(name);
         this.isDefault = isDefault;
-        if (StringUtils.toUpperEnglish(name).startsWith("INFO")) {
+        if (name.equals("INFORMATION_SCHEMA")) {
+            isSystem = true;
+        } else if (!contents.isH2 && StringUtils.toUpperEnglish(name).startsWith("INFO")) {
             isSystem = true;
         } else if (contents.isPostgreSQL && StringUtils.toUpperEnglish(name).startsWith("PG_")) {
             isSystem = true;

@@ -5394,6 +5394,15 @@ public class Parser {
         } else if (database.getSettings().defaultTableEngine != null) {
             command.setTableEngine(database.getSettings().defaultTableEngine);
         }
+        // MySQL compatibility
+        if (readIf("AUTO_INCREMENT")) {
+            read("=");
+            if (currentTokenType != VALUE || currentValue.getType() != Value.INT) {
+                throw DbException.getSyntaxError(sqlCommand, parseIndex, "integer");
+            }
+            read();
+        }
+        readIf("DEFAULT");
         if (readIf("CHARSET")) {
             read("=");
             read("UTF8");
