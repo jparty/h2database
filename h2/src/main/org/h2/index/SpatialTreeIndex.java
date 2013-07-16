@@ -28,7 +28,7 @@ import com.vividsolutions.jts.geom.Geometry;
 /**
  * This is an index based on a MVR-TreeMap.
  * @author Noël Grandin
- * @author Nicolas Fortin IRSTV FR CNRS 24888
+ * @author N. Fortin Atelier SIG, IRSTV CNRS 2488
  */
 public class SpatialTreeIndex extends PageIndex implements SpatialIndex {
     private final MVRTreeMap<Long> treeMap;

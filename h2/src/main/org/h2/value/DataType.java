@@ -38,6 +38,9 @@ import org.h2.util.Utils;
 /**
  * This class contains meta data information about data types,
  * and can convert between Java objects and Values.
+ * @author Thomas Mueller
+ * @author Noël Grandin
+ * @author N. Fortin Atelier SIG, IRSTV CNRS 2488
  */
 public class DataType {
     

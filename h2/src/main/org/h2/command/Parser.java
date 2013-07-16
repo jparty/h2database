@@ -146,6 +146,9 @@ import org.h2.value.ValueTimestamp;
 
 /**
  * The parser is used to convert a SQL statement string to an command object.
+ * @author Thomas Mueller
+ * @author Noël Grandin
+ * @author N. Fortin Atelier SIG, IRSTV CNRS 2488
  */
 public class Parser {
 

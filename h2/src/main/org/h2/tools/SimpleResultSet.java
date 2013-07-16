@@ -53,6 +53,9 @@ import org.h2.value.DataType;
  * rs.addRow(1, &quot;World&quot; });
  * </pre>
  *
+ * @author Thomas Mueller
+ * @author Noël Grandin
+ * @author N. Fortin Atelier SIG, IRSTV CNRS 2488
  */
 public class SimpleResultSet implements ResultSet, ResultSetMetaData {
 

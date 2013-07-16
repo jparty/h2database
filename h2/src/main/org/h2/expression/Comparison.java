@@ -22,6 +22,9 @@ import org.h2.value.ValueNull;
 
 /**
  * Example comparison expressions are ID=1, NAME=NAME, NAME IS NULL.
+ * @author Thomas Mueller
+ * @author Noël Grandin
+ * @author N. Fortin Atelier SIG, IRSTV CNRS 2488
  */
 public class Comparison extends Condition {
 

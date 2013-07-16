@@ -27,6 +27,9 @@ import org.h2.value.ValueNull;
 /**
  * The filter used to walk through an index. This class supports IN(..)
  * and IN(SELECT ...) optimizations.
+ * @author Thomas Mueller
+ * @author Noël Grandin
+ * @author N. Fortin Atelier SIG, IRSTV CNRS 2488
  */
 public class IndexCursor implements Cursor {
 

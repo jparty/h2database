@@ -24,7 +24,6 @@ import org.h2.engine.Database;
 import org.h2.engine.Session;
 import org.h2.jdbc.JdbcConnection;
 import org.h2.mvstore.MVStore;
-import org.h2.mvstore.db.MVTableEngine;
 import org.h2.test.TestBase;
 import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.GeometryFactory;
@@ -34,6 +33,8 @@ import org.h2.tools.SimpleRowSource;
 import org.h2.value.ValueGeometry;
 
 /**
+ * @author Noël Grandin
+ * @author N. Fortin Atelier SIG, IRSTV CNRS 2488
  * Spatial datatype and index tests.
  */
 public class TestSpatial extends TestBase {

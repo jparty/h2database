@@ -21,6 +21,9 @@ import com.vividsolutions.jts.io.WKTWriter;
 
 /**
  * Implementation of the GEOMETRY data type.
+ * @author Thomas Mueller
+ * @author Noël Grandin
+ * @author N. Fortin Atelier SIG, IRSTV CNRS 2488
  */
 public class ValueGeometry extends Value {
 

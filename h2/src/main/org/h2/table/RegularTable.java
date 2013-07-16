@@ -48,6 +48,9 @@ import org.h2.value.Value;
  * Most tables are an instance of this class. For this table, the data is stored
  * in the database. The actual data is not kept here, instead it is kept in the
  * indexes. There is at least one index, the scan index.
+ * @author Thomas Mueller
+ * @author Noël Grandin
+ * @author N. Fortin Atelier SIG, IRSTV CNRS 2488
  */
 public class RegularTable extends TableBase {
 
