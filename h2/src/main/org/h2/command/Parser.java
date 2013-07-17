@@ -3796,9 +3796,7 @@ public class Parser {
                 column.setSelectivity(selectivity);
             }
             Expression checkConstraint = templateColumn.getCheckConstraint(session, columnName);
-            if (checkConstraint != null) {
-                column.addCheckConstraint(session, checkConstraint);
-            }
+            column.addCheckConstraint(session, checkConstraint);
         }
         column.setComment(comment);
         column.setOriginalSQL(original);
@@ -4707,6 +4705,10 @@ public class Parser {
                 // HSQLDB compatibility
                 currentToken = SetTypes.getTypeName(SetTypes.MAX_LOG_SIZE);
             }
+            if (isToken("FOREIGN_KEY_CHECKS")) {
+                // MySQL compatibility
+                currentToken = SetTypes.getTypeName(SetTypes.REFERENTIAL_INTEGRITY);
+            }
             int type = SetTypes.getType(currentToken);
             if (type < 0) {
                 throw getSyntaxError();
@@ -5161,6 +5163,10 @@ public class Parser {
                 read("(");
             }
             command.setIndexColumns(parseIndexColumnList());
+            // MySQL compatibility
+            if (readIf("USING")) {
+                read("BTREE");
+            }
             return command;
         }
         AlterTableAddConstraint command;
@@ -5181,6 +5187,10 @@ public class Parser {
             if (readIf("INDEX")) {
                 String indexName = readIdentifierWithSchema();
                 command.setIndex(getSchema().findIndex(session, indexName));
+            }
+            // MySQL compatibility
+            if (readIf("USING")) {
+                read("BTREE");
             }
         } else if (readIf("FOREIGN")) {
             command = new AlterTableAddConstraint(session, schema, ifNotExists);

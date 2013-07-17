@@ -537,6 +537,9 @@ public class Column {
      * @param expr the (additional) constraint
      */
     public void addCheckConstraint(Session session, Expression expr) {
+        if (expr == null) {
+            return;
+        }
         resolver = new SingleColumnResolver(this);
         synchronized (this) {
             String oldName = name;
@@ -560,6 +563,11 @@ public class Column {
         checkConstraintSQL = getCheckConstraintSQL(session, name);
     }
 
+    public void removeCheckConstraint() {
+        checkConstraint = null;
+        checkConstraintSQL = null;
+    }
+    
     /**
      * Get the check constraint expression for this column if set.
      *
