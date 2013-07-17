@@ -62,6 +62,15 @@ public class ValueJavaObject extends ValueBytes {
         prep.setObject(parameterIndex, obj, Types.JAVA_OBJECT);
     }
 
+    @Override
+    public Object getObject() {
+        if (SysProperties.serializeJavaObject) {
+            return Utils.deserialize(value);
+        } else {
+            return super.getObject();
+        }
+    }
+
     /**
      * Value which serializes java object only for I/O operations.
      * Used when property {@link SysProperties#serializeJavaObject} is disabled.
