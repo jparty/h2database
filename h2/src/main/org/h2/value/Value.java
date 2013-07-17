@@ -19,8 +19,6 @@ import java.sql.SQLException;
 import java.sql.Time;
 import java.sql.Timestamp;
 import java.sql.Types;
-
-import com.vividsolutions.jts.geom.Geometry;
 import org.h2.constant.ErrorCode;
 import org.h2.constant.SysProperties;
 import org.h2.engine.Constants;
@@ -794,17 +792,24 @@ public abstract class Value {
                     return ValueUuid.get(getBytesNoCopy());
                 }
             }
-            case GEOMETRY:
-                switch(getType()) {
-                case BYTES:
-                    return ValueGeometry.get(getBytesNoCopy());
-                case JAVA_OBJECT:
-                    if (SysProperties.serializeJavaObject) {
-                        return ValueGeometry.getFromGeometry(Utils.deserialize(getBytesNoCopy()));
-                    } else {
-                        return ValueGeometry.getFromGeometry(getObject());
+                case GEOMETRY:
+                    switch(getType()) {
+                        case BYTES:
+                            return ValueGeometry.get(getBytesNoCopy());
+                        case JAVA_OBJECT: {
+                            Object geometry;
+                            if (SysProperties.serializeJavaObject) {
+                                geometry=Utils.deserialize(getBytesNoCopy());
+                            } else {
+                                geometry=getObject();
+                            }
+                            if(geometry!=null) {
+                                return ValueGeometry.getFromGeometry(geometry);
+                            } else {
+                                return ValueNull.INSTANCE;
+                            }
+                        }
                     }
-                }
             }
             // conversion by parsing the string value
             String s = getString();

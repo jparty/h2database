@@ -97,6 +97,9 @@ public class TestSpatial extends TestBase {
      * @return A segment within this bounding box
      */
     public static Geometry getRandomGeometry(Random geometryRand,double minX,double maxX,double minY, double maxY, double maxLength) {
+        if(maxX < minX || maxY < minY) {
+            return null;
+        }
         GeometryFactory factory = new GeometryFactory();
         // Create the start point
         Coordinate start = new Coordinate(geometryRand.nextDouble()*(maxX-minX)+minX,
@@ -405,12 +408,18 @@ public class TestSpatial extends TestBase {
         Connection conn = getConnection("spatialIndex");
         try {
             Random random = new Random(42);
+            Geometry randGeom = getRandomGeometry(random, -100, 100, -100, 100, 4);
             Statement stat = conn.createStatement();
             stat.execute("CREATE ALIAS T_RANDOM_GEOM_TABLE FOR \"" + TestSpatial.class.getName() + ".getRandomGeometryTable\"");
             stat.execute("CREATE ALIAS T_GEOMASTEXT FOR \"" + TestSpatial.class.getName() + ".geomAsText\"");
             ResultSet rs = stat.executeQuery("select T_GEOMASTEXT(THE_GEOM) from T_RANDOM_GEOM_TABLE(42,1,-100,100,-100,100,4)");
             assertTrue(rs.next());
-            assertEquals(getRandomGeometry(random, -100, 100, -100, 100, 4).toText(), rs.getString(1));
+            assertEquals(randGeom.toText(), rs.getString(1));
+            assertFalse(rs.next());
+            rs.close();
+            rs = stat.executeQuery("select the_geom::Geometry from T_RANDOM_GEOM_TABLE(42,1,-100,-150,-100,100,4)");
+            assertTrue(rs.next());
+            assertNull(rs.getObject(1));
             assertFalse(rs.next());
             rs.close();
             stat.execute("DROP ALIAS T_RANDOM_GEOM_TABLE");
