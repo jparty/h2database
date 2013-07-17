@@ -19,6 +19,8 @@ import java.sql.SQLException;
 import java.sql.Time;
 import java.sql.Timestamp;
 import java.sql.Types;
+
+import com.vividsolutions.jts.geom.Geometry;
 import org.h2.constant.ErrorCode;
 import org.h2.constant.SysProperties;
 import org.h2.engine.Constants;
@@ -34,6 +36,9 @@ import org.h2.util.Utils;
 /**
  * This is the base class for all value classes.
  * It provides conversion and comparison methods.
+ * @author Thomas Mueller
+ * @author Noël Grandin
+ * @author N. Fortin Atelier SIG, IRSTV CNRS 2488
  */
 public abstract class Value {
 
@@ -793,6 +798,12 @@ public abstract class Value {
                 switch(getType()) {
                 case BYTES:
                     return ValueGeometry.get(getBytesNoCopy());
+                case JAVA_OBJECT:
+                    if (SysProperties.serializeJavaObject) {
+                        return ValueGeometry.getFromGeometry(Utils.deserialize(getBytesNoCopy()));
+                    } else {
+                        return ValueGeometry.getFromGeometry(getObject());
+                    }
                 }
             }
             // conversion by parsing the string value
