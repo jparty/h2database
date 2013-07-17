@@ -20,6 +20,7 @@ import com.vividsolutions.jts.geom.Envelope;
 import com.vividsolutions.jts.geom.Geometry;
 import com.vividsolutions.jts.io.ParseException;
 import com.vividsolutions.jts.io.WKTReader;
+import com.vividsolutions.jts.io.WKTWriter;
 import org.h2.test.TestBase;
 import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.GeometryFactory;
@@ -389,7 +390,7 @@ public class TestSpatial extends TestBase {
             stat.execute("DROP ALIAS T_GEOMFROMTEXT");
             ResultSet rs = stat.executeQuery("select the_geom from test");
             assertTrue(rs.next());
-            assertEquals("POLYGON ((62 48, 84 48, 84 42, 56 34, 62 48))", rs.getObject(1).toString());
+            assertEquals("POLYGON ((62 48, 84 48, 84 42, 56 34, 62 48))", rs.getString(1));
         } finally {
             conn.close();
         }
@@ -403,13 +404,17 @@ public class TestSpatial extends TestBase {
         deleteDb("spatialIndex");
         Connection conn = getConnection("spatialIndex");
         try {
+            Random random = new Random(42);
             Statement stat = conn.createStatement();
             stat.execute("CREATE ALIAS T_RANDOM_GEOM_TABLE FOR \"" + TestSpatial.class.getName() + ".getRandomGeometryTable\"");
-            stat.execute("create table test as select * from T_RANDOM_GEOM_TABLE(42,20,-100,100,-100,100,4)");
-            stat.execute("DROP ALIAS T_RANDOM_GEOM_TABLE");
-            ResultSet rs = stat.executeQuery("select count(*) cpt from test");
+            stat.execute("CREATE ALIAS T_GEOMASTEXT FOR \"" + TestSpatial.class.getName() + ".geomAsText\"");
+            ResultSet rs = stat.executeQuery("select T_GEOMASTEXT(THE_GEOM) from T_RANDOM_GEOM_TABLE(42,1,-100,100,-100,100,4)");
             assertTrue(rs.next());
-            assertEquals(20, rs.getInt(1));
+            assertEquals(getRandomGeometry(random, -100, 100, -100, 100, 4).toText(), rs.getString(1));
+            assertFalse(rs.next());
+            rs.close();
+            stat.execute("DROP ALIAS T_RANDOM_GEOM_TABLE");
+            stat.execute("DROP ALIAS T_GEOMASTEXT");
         } finally {
             conn.close();
         }
@@ -417,34 +422,17 @@ public class TestSpatial extends TestBase {
     }
 
 
-    public static ResultSet getRandomGeometryTable(final long seed,final long rowCount, final double minX,final double maxX,final double minY, final double maxY, final double maxLength) {
-        SimpleResultSet rs = new SimpleResultSet(new SimpleRowSource() {
-            private final Random rnd = new Random(seed);
-            private int cpt = 0;
-            @Override
-            public Object[] readRow() throws SQLException {
-                if(cpt++<rowCount) {
-                    return new Object[]{getRandomGeometry(rnd,minX,maxX,minY,maxY,maxLength)};  //To change body of implemented methods use File | Settings | File Templates.
-                } else {
-                    return null;
-                }
-            }
-
-            @Override
-            public void close() {
-            }
-
-            @Override
-            public void reset() throws SQLException {
-                rnd.setSeed(seed);
-            }
-        });
-        rs.addColumn("the_geom", Types.OTHER,Integer.MAX_VALUE,0);
+    public static ResultSet getRandomGeometryTable(long seed, long rowCount, double minX, double maxX, double minY, double maxY, double maxLength) {
+        Random rnd = new Random(seed);
+        SimpleResultSet rs = new SimpleResultSet();
+        rs.addColumn("THE_GEOM", Types.JAVA_OBJECT, 0, 0);
+        for (int idrow = 0; idrow < rowCount; idrow++) {
+            rs.addRow(getRandomGeometry(rnd, minX, maxX, minY, maxY, maxLength));
+        }
         return rs;
     }
 
     /**
-     *
      * @param text Geometry in Well Known Text
      * @param srid Projection ID
      * @return Geometry object
@@ -458,6 +446,16 @@ public class TestSpatial extends TestBase {
         } catch (ParseException ex) {
             throw new SQLException(ex);
         }
+    }
+
+    /**
+     * @param geom Geometry object
+     * @return String WKT representation
+     */
+    public static String geomAsText(Geometry geom) throws SQLException {
+        WKTWriter wktWriter = new WKTWriter();
+        String wkt = wktWriter.write(geom);
+        return wkt;
     }
 
     private void testEmptyGeometryCollection() throws SQLException {
