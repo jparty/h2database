@@ -12,6 +12,9 @@ import org.h2.mvstore.db.MVTableEngine;
 import org.h2.util.StatementBuilder;
 import org.h2.util.StringUtils;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * The base class of a regular table, or a user defined table.
  *
@@ -24,6 +27,8 @@ public abstract class TableBase extends Table {
      * The table engine used (null for regular tables).
      */
     private final String tableEngine;
+    /** Provided table parameters */
+    private List<String> tableEngineParams = new ArrayList<String>();
 
     private final boolean globalTemporary;
 
@@ -31,6 +36,9 @@ public abstract class TableBase extends Table {
         super(data.schema, data.id, data.tableName, data.persistIndexes, data.persistData);
         this.tableEngine = data.tableEngine;
         this.globalTemporary = data.globalTemporary;
+        if(data.tableEngineParams != null) {
+            this.tableEngineParams = data.tableEngineParams;
+        }
         setTemporary(data.temporary);
         Column[] cols = new Column[data.columns.size()];
         data.columns.toArray(cols);
@@ -88,6 +96,14 @@ public abstract class TableBase extends Table {
         }
         if (isHidden) {
             buff.append("\nHIDDEN");
+        }
+        if(!tableEngineParams.isEmpty()) {
+            buff.append("\nWITH ");
+            buff.resetCount();
+            for(String parameter : tableEngineParams) {
+                buff.appendExceptFirst(", ");
+                buff.append("\""+parameter+"\"");
+            }
         }
         return buff.toString();
     }
