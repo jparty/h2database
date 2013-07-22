@@ -6,14 +6,13 @@
  */
 package org.h2.table;
 
+import java.util.ArrayList;
+import java.util.List;
 import org.h2.command.ddl.CreateTableData;
 import org.h2.constant.DbSettings;
 import org.h2.mvstore.db.MVTableEngine;
 import org.h2.util.StatementBuilder;
 import org.h2.util.StringUtils;
-
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * The base class of a regular table, or a user defined table.
@@ -29,7 +28,7 @@ public abstract class TableBase extends Table {
     private final String tableEngine;
     /** Provided table parameters */
     private List<String> tableEngineParams = new ArrayList<String>();
-
+    
     private final boolean globalTemporary;
 
     public TableBase(CreateTableData data) {
@@ -91,19 +90,19 @@ public abstract class TableBase extends Table {
                 buff.append('\"');
             }
         }
+        if(!tableEngineParams.isEmpty()) {
+            buff.append("\nWITH ");
+            buff.resetCount();
+            for (String parameter : tableEngineParams) {
+                buff.appendExceptFirst(", ");
+                buff.append("\""+parameter+"\"");
+            }
+        }
         if (!isPersistIndexes() && !isPersistData()) {
             buff.append("\nNOT PERSISTENT");
         }
         if (isHidden) {
             buff.append("\nHIDDEN");
-        }
-        if(!tableEngineParams.isEmpty()) {
-            buff.append("\nWITH ");
-            buff.resetCount();
-            for(String parameter : tableEngineParams) {
-                buff.appendExceptFirst(", ");
-                buff.append("\""+parameter+"\"");
-            }
         }
         return buff.toString();
     }
