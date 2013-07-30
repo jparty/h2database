@@ -46,7 +46,7 @@ public class ValueGeometry extends Value {
     public static ValueGeometry getFromGeometry(Object o) {
         return get((Geometry) o);
     }
-    
+
     private static ValueGeometry get(Geometry g) {
         return (ValueGeometry) Value.cache(new ValueGeometry(g));
     }
