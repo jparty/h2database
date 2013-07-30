@@ -266,6 +266,12 @@ public class TestCompatibility extends TestBase {
         stat.execute("CREATE TABLE TEST_4(ID INT PRIMARY KEY) charset=UTF8");
         stat.execute("CREATE TABLE TEST_5(ID INT PRIMARY KEY) ENGINE=InnoDb auto_increment=3 default charset=UTF8");
         stat.execute("CREATE TABLE TEST_6(ID INT PRIMARY KEY) ENGINE=InnoDb auto_increment=3 charset=UTF8");
+        stat.execute("CREATE TABLE TEST_7(ID INT, KEY TEST_7_IDX(ID) USING BTREE)");
+        stat.execute("CREATE TABLE TEST_8(ID INT, UNIQUE KEY TEST_8_IDX(ID) USING BTREE)");
+
+        // this maps to SET REFERENTIAL_INTEGRITY TRUE/FALSE
+        stat.execute("SET foreign_key_checks = 0");
+        stat.execute("SET foreign_key_checks = 1");
 
         // Check if mysql comments are supported, ensure clean connection
         conn.close();

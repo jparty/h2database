@@ -39,6 +39,7 @@ public class TestAlter extends TestBase {
         stat = conn.createStatement();
         testAlterTableAlterColumnAsSelfColumn();
         testAlterTableDropColumnWithReferences();
+        testAlterTableAlterColumnWithConstraint();
         testAlterTableAlterColumn();
         testAlterTableDropIdentityColumn();
         testAlterTableAddColumnIfNotExists();
@@ -105,6 +106,27 @@ public class TestAlter extends TestBase {
         stat.execute("alter table test drop column id");
         stat.execute("drop table test");
 
+    }
+
+    /**
+     * Tests a bug we used to have where altering the name of a column that had
+     * a check constraint that referenced itself would result in not being able
+     * to re-open the DB.
+     */
+    private void testAlterTableAlterColumnWithConstraint() throws SQLException {
+        if (config.memory) {
+            return;
+        }
+        stat.execute("create table test(id int check(id in (1,2)) )");
+        stat.execute("alter table test alter id rename to id2");
+        // disconnect and reconnect
+        conn.close();
+        conn = getConnection("alter");
+        stat = conn.createStatement();
+        stat.execute("insert into test values(1)");
+        assertThrows(ErrorCode.CHECK_CONSTRAINT_VIOLATED_1, stat).
+            execute("insert into test values(3)");
+        stat.execute("drop table test");
     }
 
     private void testAlterTableDropIdentityColumn() throws SQLException {

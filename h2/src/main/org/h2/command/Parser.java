@@ -3,6 +3,9 @@
  * Version 1.0, and under the Eclipse Public License, Version 1.0
  * (http://h2database.com/html/license.html).
  * Initial Developer: H2 Group
+ * 
+ * N. Fortin,  Atelier SIG - IRSTV CNRS 2488:
+ * Support for the operator "&&" as an alias for SPATIAL_INTERSECTS.
  */
 package org.h2.command;
 
@@ -438,6 +441,9 @@ public class Parser {
                 if (readIf("WITH")) {
                     c = parseWith();
                 }
+                break;
+            case ';':
+                c = new NoOperation(session);
                 break;
             default:
                 throw getSyntaxError();
@@ -3793,9 +3799,7 @@ public class Parser {
                 column.setSelectivity(selectivity);
             }
             Expression checkConstraint = templateColumn.getCheckConstraint(session, columnName);
-            if (checkConstraint != null) {
-                column.addCheckConstraint(session, checkConstraint);
-            }
+            column.addCheckConstraint(session, checkConstraint);
         }
         column.setComment(comment);
         column.setOriginalSQL(original);
@@ -4704,6 +4708,10 @@ public class Parser {
                 // HSQLDB compatibility
                 currentToken = SetTypes.getTypeName(SetTypes.MAX_LOG_SIZE);
             }
+            if (isToken("FOREIGN_KEY_CHECKS")) {
+                // MySQL compatibility
+                currentToken = SetTypes.getTypeName(SetTypes.REFERENTIAL_INTEGRITY);
+            }
             int type = SetTypes.getType(currentToken);
             if (type < 0) {
                 throw getSyntaxError();
@@ -5158,6 +5166,10 @@ public class Parser {
                 read("(");
             }
             command.setIndexColumns(parseIndexColumnList());
+            // MySQL compatibility
+            if (readIf("USING")) {
+                read("BTREE");
+            }
             return command;
         }
         AlterTableAddConstraint command;
@@ -5178,6 +5190,10 @@ public class Parser {
             if (readIf("INDEX")) {
                 String indexName = readIdentifierWithSchema();
                 command.setIndex(getSchema().findIndex(session, indexName));
+            }
+            // MySQL compatibility
+            if (readIf("USING")) {
+                read("BTREE");
             }
         } else if (readIf("FOREIGN")) {
             command = new AlterTableAddConstraint(session, schema, ifNotExists);
