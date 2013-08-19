@@ -202,7 +202,7 @@ public class ValueGeometry extends Value {
      * @return the well-known-binary
      */
     public byte[] toWKB() {
-        return new WKBWriter().write(geometry);
+        return new WKBWriter(3,true).write(geometry);
     }
 
     /**
