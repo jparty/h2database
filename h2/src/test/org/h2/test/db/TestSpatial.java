@@ -66,6 +66,7 @@ public class TestSpatial extends TestBase {
             testJavaAliasTableFunction();
             testMemorySpatialIndex();
             testGeometryDataType();
+            testEquals();
             deleteDb("spatial");
         }
     }
@@ -516,9 +517,15 @@ public class TestSpatial extends TestBase {
 
     private void testGeometryDataType() {
         GeometryFactory geometryFactory = new GeometryFactory();
-        Geometry geometry = geometryFactory.createPoint(new Coordinate(0,0));
+        Geometry geometry = geometryFactory.createPoint(new Coordinate(0, 0));
         assertEquals("H2 Geometry class not recognized ! Expected:\n"+Geometry.class.getName()+"\n but got:\n"
                 +DataType.getTypeClassName(DataType.getTypeFromClass(geometry.getClass()))+"\n", Value.GEOMETRY,
                 DataType.getTypeFromClass(geometry.getClass()));
+    }
+
+    private void testEquals() {
+        ValueGeometry valueGeometry = ValueGeometry.get("GEOMETRYCOLLECTION EMPTY");
+        ValueGeometry valueGeometry2 = ValueGeometry.get("GEOMETRYCOLLECTION EMPTY");
+        assertTrue(valueGeometry.equals(valueGeometry2));
     }
 }

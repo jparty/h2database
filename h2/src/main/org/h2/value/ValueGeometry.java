@@ -8,6 +8,8 @@ package org.h2.value;
 
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.util.Arrays;
+
 import org.h2.message.DbException;
 import org.h2.util.StringUtils;
 
@@ -184,7 +186,16 @@ public class ValueGeometry extends Value {
 
     @Override
     public boolean equals(Object other) {
-        return other instanceof ValueGeometry && geometry.equals(((ValueGeometry) other).geometry);
+        if (!(other instanceof ValueGeometry)) {
+            return false;
+        }
+        try {
+            return geometry.equals(((ValueGeometry) other).geometry);
+        } catch (IllegalArgumentException ex) {
+            // Throw an IllegalArgumentException if compare GeometryCollection
+            // Use an alternative way to compare
+            return Arrays.equals(toWKB(), ((ValueGeometry) other).toWKB());
+        }
     }
 
     /**
