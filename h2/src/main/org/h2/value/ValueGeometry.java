@@ -8,13 +8,12 @@ package org.h2.value;
 
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.util.Arrays;
 
-import com.vividsolutions.jts.geom.CoordinateFilter;
 import com.vividsolutions.jts.geom.CoordinateSequence;
 import com.vividsolutions.jts.geom.CoordinateSequenceFilter;
 import org.h2.message.DbException;
 import org.h2.util.StringUtils;
-import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.Envelope;
 import com.vividsolutions.jts.geom.Geometry;
 import com.vividsolutions.jts.geom.GeometryFactory;
@@ -188,7 +187,17 @@ public class ValueGeometry extends Value {
 
     @Override
     public boolean equals(Object other) {
-        return other instanceof ValueGeometry && geometry.equals(((ValueGeometry) other).geometry);
+        try {
+            return other instanceof ValueGeometry && Arrays.equals(toWKB(), ((ValueGeometry) other).toWKB());
+        } catch (IllegalArgumentException ex) {
+            // Cannot convert to WKB
+            try {
+                return other instanceof ValueGeometry && geometry.equals(((ValueGeometry) other).getGeometry());
+            } catch (IllegalArgumentException ex2) {
+                // Should not happens
+                return false;
+            }
+        }
     }
 
     /**
