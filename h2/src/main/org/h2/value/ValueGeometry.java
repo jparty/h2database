@@ -187,7 +187,17 @@ public class ValueGeometry extends Value {
 
     @Override
     public boolean equals(Object other) {
-        return other instanceof ValueGeometry && Arrays.equals(toWKB(), ((ValueGeometry) other).toWKB());
+        try {
+            return other instanceof ValueGeometry && Arrays.equals(toWKB(), ((ValueGeometry) other).toWKB());
+        } catch (IllegalArgumentException ex) {
+            // Cannot convert to WKB
+            try {
+                return other instanceof ValueGeometry && geometry.equals(((ValueGeometry) other).getGeometry());
+            } catch (IllegalArgumentException ex2) {
+                // Should not happens
+                return false;
+            }
+        }
     }
 
     /**
@@ -242,7 +252,7 @@ public class ValueGeometry extends Value {
     /**
      * Convert a Well-Known-Binary to a Geometry object.
      *
-     * @param s the well-known-binary
+     * @param bytes the well-known-binary
      * @return the Geometry object
      */
     private static Geometry fromWKB(byte[] bytes) {
