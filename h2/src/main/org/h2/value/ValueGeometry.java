@@ -217,8 +217,12 @@ public class ValueGeometry extends Value {
     public byte[] toWKB() {
         int dimensionCount = getDimensionCount();
         boolean includeSRID = geometry.getSRID() != 0;
-        WKBWriter writer = new WKBWriter(dimensionCount, includeSRID);
-        return writer.write(geometry);
+        try {
+            WKBWriter writer = new WKBWriter(dimensionCount, includeSRID);
+            return writer.write(geometry);
+        } catch (IllegalArgumentException ex) {
+            return new byte[] {};
+        }
     }
 
     private int getDimensionCount() {
@@ -280,4 +284,11 @@ public class ValueGeometry extends Value {
         }
     }
 
+    public Value convertTo(int targetType) {
+        if(targetType == Value.JAVA_OBJECT) {
+            return this;
+        } else {
+            return super.convertTo(targetType);
+        }
+    }
 }

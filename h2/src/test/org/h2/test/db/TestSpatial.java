@@ -62,6 +62,7 @@ public class TestSpatial extends TestBase {
             testMemorySpatialIndex();
             testGeometryDataType();
             testWKB();
+            testValueConversion();
             deleteDb("spatial");
         }
     }
@@ -528,5 +529,30 @@ public class TestSpatial extends TestBase {
         geom3d.getGeometry().setSRID(27572);
         copy = ValueGeometry.get(geom3d.getBytes());
         assertEquals(27572, copy.getGeometry().getSRID());
+    }
+
+    /**
+     * Test conversion of Geometry object into Object
+     * @throws SQLException
+     */
+    private void testValueConversion() throws SQLException {
+        deleteDb("getObjectString");
+        Connection conn = getConnection("getObjectString");
+        try {
+            Statement stat = conn.createStatement();
+            stat.execute("CREATE ALIAS OBJSTRING FOR \"" +
+                    TestSpatial.class.getName() + ".getObjectString\"");
+            ResultSet rs = stat.executeQuery("select OBJSTRING('POINT( 15 25 )'::geometry)");
+            assertTrue(rs.next());
+            assertEquals("POINT (15 25)", rs.getString(1));
+        } finally {
+            conn.close();
+        }
+        deleteDb("getObjectString");
+
+    }
+
+    public static String getObjectString(Object object) {
+        return object.toString();
     }
 }
