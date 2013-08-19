@@ -6,15 +6,13 @@
 package org.h2.test.db;
 
 import java.sql.Connection;
-import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Savepoint;
 import java.sql.Statement;
 import java.sql.Types;
-import java.util.HashSet;
+import java.util.Arrays;
 import java.util.Random;
-import java.util.Set;
 
 import org.h2.test.TestBase;
 import org.h2.tools.SimpleResultSet;
@@ -24,7 +22,6 @@ import org.h2.value.Value;
 import org.h2.value.ValueGeometry;
 
 import com.vividsolutions.jts.geom.Coordinate;
-import com.vividsolutions.jts.geom.Envelope;
 import com.vividsolutions.jts.geom.Geometry;
 import com.vividsolutions.jts.geom.GeometryFactory;
 import com.vividsolutions.jts.geom.Polygon;
@@ -67,6 +64,7 @@ public class TestSpatial extends TestBase {
             testMemorySpatialIndex();
             testGeometryDataType();
             testEquals();
+            testWKB();
             deleteDb("spatial");
         }
     }
@@ -527,5 +525,18 @@ public class TestSpatial extends TestBase {
         ValueGeometry valueGeometry = ValueGeometry.get("GEOMETRYCOLLECTION EMPTY");
         ValueGeometry valueGeometry2 = ValueGeometry.get("GEOMETRYCOLLECTION EMPTY");
         assertTrue(valueGeometry.equals(valueGeometry2));
+    }
+
+    /**
+     * Test serialisation of Z and SRID values.
+     */
+    private void testWKB() {
+        ValueGeometry geom2d = ValueGeometry.get("POLYGON ((67 13, 67 18, 59 18, 59 13, 67 13))");
+        ValueGeometry geom3d = ValueGeometry.get("POLYGON ((67 13 , 67 18 5, 59 18, 59 13, 67 13 ))");
+        assertFalse(Arrays.equals(geom2d.toWKB(), geom3d.toWKB()));
+        geom3d = ValueGeometry.get(geom2d.getBytes());
+        assertTrue(Arrays.equals(geom2d.toWKB(), geom3d.toWKB()));
+        geom3d.getGeometry().setSRID(37572);
+        assertFalse(Arrays.equals(geom2d.toWKB(), geom3d.toWKB()));
     }
 }

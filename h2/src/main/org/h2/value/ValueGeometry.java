@@ -10,6 +10,7 @@ import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.Arrays;
 
+import com.vividsolutions.jts.geom.Coordinate;
 import org.h2.message.DbException;
 import org.h2.util.StringUtils;
 
@@ -186,16 +187,7 @@ public class ValueGeometry extends Value {
 
     @Override
     public boolean equals(Object other) {
-        if (!(other instanceof ValueGeometry)) {
-            return false;
-        }
-        try {
-            return geometry.equals(((ValueGeometry) other).geometry);
-        } catch (IllegalArgumentException ex) {
-            // Throw an IllegalArgumentException if compare GeometryCollection
-            // Use an alternative way to compare
-            return Arrays.equals(toWKB(), ((ValueGeometry) other).toWKB());
-        }
+        return other instanceof ValueGeometry && Arrays.equals(toWKB(), ((ValueGeometry) other).toWKB());
     }
 
     /**
@@ -207,13 +199,30 @@ public class ValueGeometry extends Value {
         return new WKTWriter().write(geometry);
     }
 
+
+    /**
+     * @param coordinates Coordinate array
+     * @return True if the array is empty or contain only 2d coordinates.
+     */
+    private static boolean is2d(Coordinate[] coordinates) {
+        if(coordinates==null || coordinates.length==0) {
+            return true;
+        }
+        for(Coordinate coordinate : coordinates) {
+            if(!Double.isNaN(coordinate.z)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     /**
      * Convert to Well-Known-Binary format.
      *
      * @return the well-known-binary
      */
     public byte[] toWKB() {
-        return new WKBWriter(3,true).write(geometry);
+        return new WKBWriter(is2d(geometry.getCoordinates()) ? 2 : 3, geometry.getSRID() != 0).write(geometry);
     }
 
     /**
