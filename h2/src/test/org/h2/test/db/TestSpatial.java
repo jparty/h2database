@@ -11,6 +11,7 @@ import java.sql.SQLException;
 import java.sql.Savepoint;
 import java.sql.Statement;
 import java.sql.Types;
+import java.util.Arrays;
 import java.util.Random;
 import org.h2.test.TestBase;
 import org.h2.tools.SimpleResultSet;
@@ -23,6 +24,7 @@ import com.vividsolutions.jts.geom.GeometryFactory;
 import com.vividsolutions.jts.geom.Polygon;
 import com.vividsolutions.jts.io.ParseException;
 import com.vividsolutions.jts.io.WKTReader;
+import org.h2.value.ValueGeometry;
 
 /**
  * Spatial datatype and index tests.
@@ -59,6 +61,7 @@ public class TestSpatial extends TestBase {
             testJavaAliasTableFunction();
             testMemorySpatialIndex();
             testGeometryDataType();
+            testWKB();
             deleteDb("spatial");
         }
     }
@@ -510,5 +513,20 @@ public class TestSpatial extends TestBase {
         GeometryFactory geometryFactory = new GeometryFactory();
         Geometry geometry = geometryFactory.createPoint(new Coordinate(0, 0));
         assertEquals(Value.GEOMETRY, DataType.getTypeFromClass(geometry.getClass()));
+    }
+
+    /**
+     * Test serialisation of Z and SRID values.
+     */
+    private void testWKB() {
+        ValueGeometry geom3d = ValueGeometry.get("POLYGON ((67 13 6, 67 18 5, 59 18 4, 59 13 6,  67 13 6))");
+        ValueGeometry copy = ValueGeometry.get(geom3d.getBytes());
+        assertEquals(6, copy.getGeometry().getCoordinates()[0].z);
+        assertEquals(5, copy.getGeometry().getCoordinates()[1].z);
+        assertEquals(4, copy.getGeometry().getCoordinates()[2].z);
+        // Test SRID
+        geom3d.getGeometry().setSRID(27572);
+        copy = ValueGeometry.get(geom3d.getBytes());
+        assertEquals(27572, copy.getGeometry().getSRID());
     }
 }

@@ -8,6 +8,10 @@ package org.h2.value;
 
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+
+import com.vividsolutions.jts.geom.CoordinateFilter;
+import com.vividsolutions.jts.geom.CoordinateSequence;
+import com.vividsolutions.jts.geom.CoordinateSequenceFilter;
 import org.h2.message.DbException;
 import org.h2.util.StringUtils;
 import com.vividsolutions.jts.geom.Coordinate;
@@ -209,18 +213,36 @@ public class ValueGeometry extends Value {
     }
 
     private int getDimensionCount() {
-        Coordinate[] coordinates = geometry.getCoordinates();
-        if (coordinates == null) {
-            return 2;
+        ZVisitor finder = new ZVisitor();
+        geometry.apply(finder);
+        return finder.isFoundZ() ? 3 : 2;
+    }
+
+    private static class ZVisitor implements CoordinateSequenceFilter {
+        boolean foundZ = false;
+
+        public boolean isFoundZ() {
+            return foundZ;
         }
-        for (Coordinate coordinate : coordinates) {
-            if (!Double.isNaN(coordinate.z)) {
-                return 3;
+
+        @Override
+        public void filter(CoordinateSequence coordinateSequence, int i) {
+            if(!Double.isNaN(coordinateSequence.getOrdinate(i, 2))) {
+                foundZ = true;
             }
         }
-        return 2;
+
+        @Override
+        public boolean isDone() {
+            return foundZ;
+        }
+
+        @Override
+        public boolean isGeometryChanged() {
+            return false;
+        }
     }
-    
+
     /**
      * Convert a Well-Known-Text to a Geometry object.
      *
