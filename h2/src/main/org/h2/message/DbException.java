@@ -11,10 +11,14 @@ import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.sql.SQLException;
 import java.text.MessageFormat;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Locale;
 import java.util.Properties;
 import java.util.Map.Entry;
 import org.h2.constant.ErrorCode;
+import org.h2.jdbc.JdbcParseSQLException;
 import org.h2.jdbc.JdbcSQLException;
 import org.h2.util.SortedProperties;
 import org.h2.util.StringUtils;
@@ -192,8 +196,20 @@ public class DbException extends RuntimeException {
      * @return the exception
      */
     public static DbException getSyntaxError(String sql, int index, String expected) {
+        return getSyntaxError(sql, index, expected, Arrays.asList(expected));
+    }
+
+    /**
+     * Create a syntax error exception.
+     *
+     * @param sql the SQL statement
+     * @param index the position of the error in the SQL statement
+     * @param expected the expected keyword at the given position
+     * @return the exception
+     */
+    public static DbException getSyntaxError(String sql, int index, String message, List<String> expected) {
         sql = StringUtils.addAsterisk(sql, index);
-        return get(ErrorCode.SYNTAX_ERROR_2, sql, expected);
+        return new DbException(getParseJdbcSQLException(ErrorCode.SYNTAX_ERROR_2, null, index, expected, sql, message));
     }
 
     /**
@@ -326,9 +342,27 @@ public class DbException extends RuntimeException {
      * @return the SQLException object
      */
     private static JdbcSQLException getJdbcSQLException(int errorCode, Throwable cause, String... params) {
+        return getParseJdbcSQLException(errorCode, cause, 0 , null, params);
+    }
+
+    /**
+     * Gets the SQL exception object for a specific error code.
+     *
+     * @param errorCode the error code
+     * @param cause the cause of the exception
+     * @param syntaxErrorPosition Syntax error character index
+     * @param expectedTokens H2 parser expected tokens
+     * @param params the list of parameters of the message
+     * @return the SQLException object
+     */
+    private static JdbcSQLException getParseJdbcSQLException(int errorCode, Throwable cause, int syntaxErrorPosition, List<String> expectedTokens, String... params) {
         String sqlstate = ErrorCode.getState(errorCode);
         String message = translate(sqlstate, params);
-        return new JdbcSQLException(message, null, sqlstate, errorCode, cause, null);
+        if(expectedTokens == null) {
+            return new JdbcSQLException(message, null, sqlstate, errorCode, cause, null);
+        } else {
+            return new JdbcParseSQLException(message, null, sqlstate, errorCode, cause, null, expectedTokens, syntaxErrorPosition);
+        }
     }
 
     /**

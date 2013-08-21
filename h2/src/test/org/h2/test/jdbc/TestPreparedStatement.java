@@ -26,6 +26,8 @@ import java.util.GregorianCalendar;
 import java.util.SimpleTimeZone;
 import java.util.TimeZone;
 import java.util.UUID;
+
+import org.h2.api.SQLParseException;
 import org.h2.api.Trigger;
 import org.h2.constant.ErrorCode;
 import org.h2.test.TestBase;
@@ -86,6 +88,7 @@ public class TestPreparedStatement extends TestBase {
         testBlob(conn);
         testClob(conn);
         testParameterMetaData(conn);
+        testParseException(conn);
         conn.close();
         deleteDb("preparedStatement");
     }
@@ -1182,4 +1185,31 @@ public class TestPreparedStatement extends TestBase {
         assertTrue(!rs.next());
     }
 
+    private void testParseException(Connection conn) {
+        try {
+            conn.prepareStatement("SELECT * FROM");
+            assertTrue(false); // Should throw SQLException before
+        } catch (SQLException ex) {
+            assertTrue(ex instanceof SQLParseException);
+            SQLParseException parseException = (SQLParseException) ex;
+            assertEquals(14, parseException.getSyntaxErrorPosition());
+            assertEquals(1, parseException.getExpectedTokens().size());
+            assertEquals("identifier", parseException.getExpectedTokens().get(0));
+        }
+        try {
+            conn.prepareStatement("ALTER");
+            assertTrue(false); // Should throw SQLException before
+        } catch (SQLException ex) {
+            assertTrue(ex instanceof SQLParseException);
+            SQLParseException parseException = (SQLParseException) ex;
+            assertEquals(6, parseException.getSyntaxErrorPosition());
+            assertEquals(6, parseException.getExpectedTokens().size());
+            assertEquals("TABLE", parseException.getExpectedTokens().get(0));
+            assertEquals("USER", parseException.getExpectedTokens().get(1));
+            assertEquals("INDEX", parseException.getExpectedTokens().get(2));
+            assertEquals("SCHEMA", parseException.getExpectedTokens().get(3));
+            assertEquals("SEQUENCE", parseException.getExpectedTokens().get(4));
+            assertEquals("VIEW", parseException.getExpectedTokens().get(5));
+        }
+    }
 }
