@@ -50,6 +50,7 @@ public class TestMetaData extends TestBase {
         testStatic();
         testGeneral();
         testAllowLiteralsNone();
+        testSessions();
     }
 
     private void testColumnResultSetMeta() throws SQLException {
@@ -971,4 +972,24 @@ public class TestMetaData extends TestBase {
         deleteDb("metaData");
     }
 
+    private void testSessions() throws SQLException {
+        Connection conn = getConnection("metaData");
+        conn.setAutoCommit(false);
+        Statement stat = conn.createStatement();
+        stat.execute("create table test(id int)");
+        stat.execute("begin transaction");
+        for (int i = 0; i < 6; i++) {
+            stat.execute("insert into test values (1)");
+        }
+        ResultSet rs = stat.executeQuery("select contains_uncommitted from INFORMATION_SCHEMA.SESSIONS");
+        rs.next();
+        assertEquals(true, rs.getBoolean(1));
+        rs.close();
+        stat.execute("commit");
+        rs = stat.executeQuery("select contains_uncommitted from INFORMATION_SCHEMA.SESSIONS");
+        rs.next();
+        assertEquals(false, rs.getBoolean(1));
+        conn.close();
+        deleteDb("metaData");
+    }
 }

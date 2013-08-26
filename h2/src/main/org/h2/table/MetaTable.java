@@ -488,7 +488,8 @@ public class MetaTable extends Table {
                     "USER_NAME",
                     "SESSION_START",
                     "STATEMENT",
-                    "STATEMENT_START"
+                    "STATEMENT_START",
+                    "CONTAINS_UNCOMMITTED"
             );
             break;
         }
@@ -1547,7 +1548,9 @@ public class MetaTable extends Table {
                             // STATEMENT
                             command == null ? null : command.toString(),
                             // STATEMENT_START
-                            new Timestamp(start).toString()
+                            new Timestamp(start).toString(),
+                            // CONTAINS_UNCOMMITTED
+                            "" + s.containsUncommitted()
                     );
                 }
             }

@@ -201,34 +201,30 @@ public class ValueGeometry extends Value {
 
 
     /**
-     * @param coordinates Coordinate array
-     * @return True if the array is empty or contain only 2d coordinates.
-     */
-    private static boolean is2d(Coordinate[] coordinates) {
-        if(coordinates==null || coordinates.length==0) {
-            return true;
-        }
-        for(Coordinate coordinate : coordinates) {
-            if(!Double.isNaN(coordinate.z)) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    /**
      * Convert to Well-Known-Binary format.
      *
      * @return the well-known-binary
      */
     public byte[] toWKB() {
-        try {
-            return new WKBWriter(is2d(geometry.getCoordinates()) ? 2 : 3, geometry.getSRID() != 0).write(geometry);
-        } catch (IllegalArgumentException ex) {
-            return new byte[] {};
-        }
+        int dimensionCount = getDimensionCount();
+        boolean includeSRID = geometry.getSRID() != 0;
+        WKBWriter writer = new WKBWriter(dimensionCount, includeSRID);
+        return writer.write(geometry);
     }
 
+    private int getDimensionCount() {
+        Coordinate[] coordinates = geometry.getCoordinates();
+        if (coordinates == null) {
+            return 2;
+        }
+        for (Coordinate coordinate : coordinates) {
+            if (!Double.isNaN(coordinate.z)) {
+                return 3;
+            }
+        }
+        return 2;
+    }
+    
     /**
      * Convert a Well-Known-Text to a Geometry object.
      *

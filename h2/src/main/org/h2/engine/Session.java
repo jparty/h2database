@@ -841,7 +841,7 @@ public class Session extends SessionWithState {
         firstUncommittedPos = Session.LOG_WRITTEN;
     }
 
-    private boolean containsUncommitted() {
+    public boolean containsUncommitted() {
         return firstUncommittedLog != Session.LOG_WRITTEN;
     }
 

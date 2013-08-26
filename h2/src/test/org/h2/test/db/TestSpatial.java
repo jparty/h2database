@@ -450,6 +450,7 @@ public class TestSpatial extends TestBase {
 
     /**
      * Generate a result set with random geometry data.
+     * Used as an ALIAS function.
      *
      * @param seed the random seed
      * @param rowCount the number of rows
