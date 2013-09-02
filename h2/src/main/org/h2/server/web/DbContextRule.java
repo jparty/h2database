@@ -29,7 +29,12 @@ public class DbContextRule implements Rule {
     private final DbContents contents;
     private final int type;
 
-    DbContextRule(DbContents contents, int type) {
+    /**
+     * BNF terminal rule Constructor
+     * @param contents Extract rule from this component
+     * @param type Rule type, one of {@link DbContextRule#COLUMN,DbContextRule#TABLE,DbContextRule#TABLE_ALIAS,DbContextRule#NEW_TABLE_ALIAS,DbContextRule#COLUMN_ALIAS,DbContextRule#SCHEMA}
+     */
+    public DbContextRule(DbContents contents, int type) {
         this.contents = contents;
         this.type = type;
     }
