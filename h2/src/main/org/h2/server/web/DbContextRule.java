@@ -22,9 +22,9 @@ import org.h2.util.StringUtils;
  */
 public class DbContextRule implements Rule {
 
-    static final int COLUMN = 0, TABLE = 1, TABLE_ALIAS = 2;
-    static final int NEW_TABLE_ALIAS = 3;
-    static final int COLUMN_ALIAS = 4, SCHEMA = 5;
+    public static final int COLUMN = 0, TABLE = 1, TABLE_ALIAS = 2;
+    public static final int NEW_TABLE_ALIAS = 3;
+    public static final int COLUMN_ALIAS = 4, SCHEMA = 5;
 
     private final DbContents contents;
     private final int type;
