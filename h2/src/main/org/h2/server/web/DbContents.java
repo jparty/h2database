@@ -87,7 +87,7 @@ public class DbContents {
      * @param defaultColumnIndex the default column index
      * @return the column index
      */
-    static int findColumn(ResultSet rs, String columnName, int defaultColumnIndex) {
+    public static int findColumn(ResultSet rs, String columnName, int defaultColumnIndex) {
         try {
             return rs.findColumn(columnName);
         } catch (SQLException e) {
@@ -100,7 +100,7 @@ public class DbContents {
      *
      * @param meta the database meta data
      */
-    synchronized void readContents(DatabaseMetaData meta) throws SQLException {
+    public synchronized void readContents(DatabaseMetaData meta) throws SQLException {
         String prod = StringUtils.toLowerEnglish(meta.getDatabaseProductName());
         isSQLite = prod.indexOf("sqlite") >= 0;
         String url = meta.getURL();
@@ -233,7 +233,7 @@ public class DbContents {
      * @param identifier the identifier
      * @return the quoted identifier
      */
-    String quoteIdentifier(String identifier) {
+    public String quoteIdentifier(String identifier) {
         if (identifier == null) {
             return null;
         }

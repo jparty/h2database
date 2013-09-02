@@ -56,5 +56,8 @@ Export-Package: org.h2;version="${version}",
  org.h2.index;version="${version}",
  org.h2.table;version="${version}",
  org.h2.result;version="${version}",
- org.h2.value;version="${version}"
+ org.h2.value;version="${version}",
+ org.h2.server.web;version="${version}",
+ org.h2.bnf;version="${version}"
+
 Premain-Class: org.h2.util.Profiler
