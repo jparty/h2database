@@ -17,6 +17,8 @@ import java.util.HashMap;
 import java.util.Locale;
 
 import org.h2.bnf.Bnf;
+import org.h2.bnf.context.DbContents;
+import org.h2.bnf.context.DbContextRule;
 import org.h2.message.TraceSystem;
 import org.h2.util.New;
 

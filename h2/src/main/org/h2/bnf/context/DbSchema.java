@@ -4,7 +4,7 @@
  * (http://h2database.com/html/license.html).
  * Initial Developer: H2 Group
  */
-package org.h2.server.web;
+package org.h2.bnf.context;
 
 import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
@@ -22,42 +22,42 @@ public class DbSchema {
     /**
      * Up to this many tables, the column type and indexes are listed.
      */
-    static final int MAX_TABLES_LIST_INDEXES = 100;
+    public static final int MAX_TABLES_LIST_INDEXES = 100;
 
     /**
      * Up to this many tables, the column names are listed.
      */
-    static final int MAX_TABLES_LIST_COLUMNS = 500;
+    public static final int MAX_TABLES_LIST_COLUMNS = 500;
 
     /**
      * The database content container.
      */
-    final DbContents contents;
+    private final DbContents contents;
 
     /**
      * The schema name.
      */
-    final String name;
+    public final String name;
 
     /**
      * True if this is the default schema for this database.
      */
-    final boolean isDefault;
+    public final boolean isDefault;
 
     /**
      * True if this is a system schema (for example the INFORMATION_SCHEMA).
      */
-    final boolean isSystem;
+    public final boolean isSystem;
 
     /**
      * The quoted schema name.
      */
-    final String quotedName;
+    public final String quotedName;
 
     /**
      * The table list.
      */
-    DbTableOrView[] tables;
+    private DbTableOrView[] tables;
 
     DbSchema(DbContents contents, String name, boolean isDefault) {
         this.contents = contents;
@@ -66,15 +66,29 @@ public class DbSchema {
         this.isDefault = isDefault;
         if (name.equals("INFORMATION_SCHEMA")) {
             isSystem = true;
-        } else if (!contents.isH2 && StringUtils.toUpperEnglish(name).startsWith("INFO")) {
+        } else if (!contents.isH2() && StringUtils.toUpperEnglish(name).startsWith("INFO")) {
             isSystem = true;
-        } else if (contents.isPostgreSQL && StringUtils.toUpperEnglish(name).startsWith("PG_")) {
+        } else if (contents.isPostgreSQL() && StringUtils.toUpperEnglish(name).startsWith("PG_")) {
             isSystem = true;
-        } else if (contents.isDerby && name.startsWith("SYS")) {
+        } else if (contents.isDerby() && name.startsWith("SYS")) {
             isSystem = true;
         } else {
             isSystem = false;
         }
+    }
+
+    /**
+     * @return The database content container.
+     */
+    public DbContents getContents() {
+        return contents;
+    }
+
+    /**
+     * @return The table list.
+     */
+    public DbTableOrView[] getTables() {
+        return tables;
     }
 
     /**
@@ -88,7 +102,7 @@ public class DbSchema {
         ArrayList<DbTableOrView> list = New.arrayList();
         while (rs.next()) {
             DbTableOrView table = new DbTableOrView(this, rs);
-            if (contents.isOracle && table.name.indexOf('$') > 0) {
+            if (contents.isOracle() && table.getName().indexOf('$') > 0) {
                 continue;
             }
             list.add(table);
