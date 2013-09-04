@@ -4,7 +4,7 @@
  * (http://h2database.com/html/license.html).
  * Initial Developer: H2 Group
  */
-package org.h2.server.web;
+package org.h2.bnf.context;
 
 import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
@@ -14,30 +14,42 @@ import java.sql.SQLException;
  * Keeps the meta data information of a column.
  * This class is used by the H2 Console.
  */
-class DbColumn {
+public class DbColumn {
+
+    private final String name;
+
+    private final String quotedName;
+
+    private final String dataType;
 
     /**
-     * The column name.
-     */
-    final String name;
-
-    /**
-     * The quoted table name.
-     */
-    final String quotedName;
-
-    /**
-     * The data type name (including precision and the NOT NULL flag if
+     * @return The data type name (including precision and the NOT NULL flag if
      * applicable).
      */
-    final String dataType;
+    public String getDataType() {
+        return dataType;
+    }
 
-    DbColumn(DbContents contents, ResultSet rs) throws SQLException {
+    /**
+     * @return The column name.
+     */
+    public String getName() {
+        return name;
+    }
+
+    /**
+     * @return The quoted table name.
+     */
+    public String getQuotedName() {
+        return quotedName;
+    }
+
+    public DbColumn(DbContents contents, ResultSet rs) throws SQLException {
         name = rs.getString("COLUMN_NAME");
         quotedName = contents.quoteIdentifier(name);
         String type = rs.getString("TYPE_NAME");
         int size = rs.getInt(DbContents.findColumn(rs, "COLUMN_SIZE", 7));
-        boolean isSQLite = contents.isSQLite;
+        boolean isSQLite = contents.isSQLite();
         if (size > 0 && !isSQLite) {
             type += "(" + size;
             int prec = rs.getInt(DbContents.findColumn(rs, "DECIMAL_DIGITS", 9));
