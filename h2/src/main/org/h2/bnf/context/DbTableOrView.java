@@ -4,7 +4,7 @@
  * (http://h2database.com/html/license.html).
  * Initial Developer: H2 Group
  */
-package org.h2.server.web;
+package org.h2.bnf.context;
 
 import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
@@ -21,34 +21,69 @@ public class DbTableOrView {
     /**
      * The schema this table belongs to.
      */
-    final DbSchema schema;
+    private final DbSchema schema;
 
     /**
      * The table name.
      */
-    final String name;
+    private final String name;
 
     /**
      * The quoted table name.
      */
-    final String quotedName;
+    private final String quotedName;
 
     /**
      * True if this represents a view.
      */
-    final boolean isView;
+    private final boolean isView;
 
     /**
      * The column list.
      */
-    DbColumn[] columns;
+    private DbColumn[] columns;
 
     DbTableOrView(DbSchema schema, ResultSet rs) throws SQLException {
         this.schema = schema;
         name = rs.getString("TABLE_NAME");
         String type = rs.getString("TABLE_TYPE");
         isView = "VIEW".equals(type);
-        quotedName = schema.contents.quoteIdentifier(name);
+        quotedName = schema.getContents().quoteIdentifier(name);
+    }
+
+    /**
+     * @return The schema this table belongs to.
+     */
+    public DbSchema getSchema() {
+        return schema;
+    }
+
+    /**
+     * @return The column list.
+     */
+    public DbColumn[] getColumns() {
+        return columns;
+    }
+
+    /**
+     * @return The table name.
+     */
+    public String getName() {
+        return name;
+    }
+
+    /**
+     * @return True if this represents a view.
+     */
+    public boolean isView() {
+        return isView;
+    }
+
+    /**
+     * @return The quoted table name.
+     */
+    public String getQuotedName() {
+        return quotedName;
     }
 
     /**
@@ -60,7 +95,7 @@ public class DbTableOrView {
         ResultSet rs = meta.getColumns(null, schema.name, name, null);
         ArrayList<DbColumn> list = New.arrayList();
         while (rs.next()) {
-            DbColumn column = new DbColumn(schema.contents, rs);
+            DbColumn column = new DbColumn(schema.getContents(), rs);
             list.add(column);
         }
         rs.close();

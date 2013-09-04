@@ -4,7 +4,7 @@
  * (http://h2database.com/html/license.html).
  * Initial Developer: H2 Group
  */
-package org.h2.server.web;
+package org.h2.bnf.context;
 
 import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
@@ -22,60 +22,94 @@ import org.h2.util.StringUtils;
  */
 public class DbContents {
 
-    /**
-     * The list of schemas.
-     */
-    DbSchema[] schemas;
-
-    /**
-     * The default schema.
-     */
-    DbSchema defaultSchema;
-
-    /**
-     * True if this is an Oracle database.
-     */
-    boolean isOracle;
-
-    /**
-     * True if this is a H2 database.
-     */
-    boolean isH2;
-
-    /**
-     * True if this is a PostgreSQL database.
-     */
-    boolean isPostgreSQL;
-
-    /**
-     * True if this is an Apache Derby database.
-     */
-    boolean isDerby;
-
-    /**
-     * True if this is an SQLite database.
-     */
-    boolean isSQLite;
-
-    /**
-     * True if this is a H2 database in MySQL mode.
-     */
+    private DbSchema[] schemas;
+    private DbSchema defaultSchema;
+    private boolean isOracle;
+    private boolean isH2;
+    private boolean isPostgreSQL;
+    private boolean isDerby;
+    private boolean isSQLite;
     private boolean isH2ModeMySQL;
-
-    /**
-     * True if this is a MySQL database.
-     */
     private boolean isMySQL;
-
-    /**
-     * True if this is a Firebird database.
-     */
     private boolean isFirebird;
+    private boolean isMSSQLServer;
 
     /**
-     * True if this is a MS SQL Server database.
+     * @return The default schema.
      */
-    private boolean isMSSQLServer;
+    public DbSchema getDefaultSchema() {
+        return defaultSchema;
+    }
+
+    /**
+     * @return True if this is an Apache Derby database.
+     */
+    public boolean isDerby() {
+        return isDerby;
+    }
+
+    /**
+     * @return True if this is a Firebird database.
+     */
+    public boolean isFirebird() {
+        return isFirebird;
+    }
+
+    /**
+     * @return True if this is a H2 database.
+     */
+    public boolean isH2() {
+        return isH2;
+    }
+
+    /**
+     * @return True if this is a H2 database in MySQL mode.
+     */
+    public boolean isH2ModeMySQL() {
+        return isH2ModeMySQL;
+    }
+
+    /**
+     * @return True if this is a MS SQL Server database.
+     */
+    public boolean isMSSQLServer() {
+        return isMSSQLServer;
+    }
+
+    /**
+     * @return True if this is a MySQL database.
+     */
+    public boolean isMySQL() {
+        return isMySQL;
+    }
+
+    /**
+     * @return True if this is an Oracle database.
+     */
+    public boolean isOracle() {
+        return isOracle;
+    }
+
+    /**
+     * @return True if this is a PostgreSQL database.
+     */
+    public boolean isPostgreSQL() {
+        return isPostgreSQL;
+    }
+
+    /**
+     * @return True if this is an SQLite database.
+     */
+    public boolean isSQLite() {
+        return isSQLite;
+    }
+
+    /**
+     * @return The list of schemas.
+     */
+    public DbSchema[] getSchemas() {
+        return schemas;
+    }
 
     /**
      * Get the column index of a column in a result set. If the column is not
