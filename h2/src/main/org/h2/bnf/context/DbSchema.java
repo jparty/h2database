@@ -102,6 +102,13 @@ public class DbSchema {
     }
 
     /**
+     * @return The procedure list.
+     */
+    public DbProcedure[] getProcedures() {
+        return procedures;
+    }
+
+    /**
      * Read all tables for this schema from the database meta data.
      *
      * @param meta the database meta data
