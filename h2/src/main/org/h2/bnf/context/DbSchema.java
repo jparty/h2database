@@ -30,6 +30,11 @@ public class DbSchema {
     public static final int MAX_TABLES_LIST_COLUMNS = 500;
 
     /**
+     * Up to this many tables, the column names are listed.
+     */
+    public static final int MAX_PROCEDURES_LIST_COLUMNS = 500;
+
+    /**
      * The database content container.
      */
     private final DbContents contents;
@@ -58,6 +63,11 @@ public class DbSchema {
      * The table list.
      */
     private DbTableOrView[] tables;
+
+    /**
+     * The procedures list.
+     */
+    private DbProcedure[] procedures;
 
     DbSchema(DbContents contents, String name, boolean isDefault) {
         this.contents = contents;
@@ -97,7 +107,7 @@ public class DbSchema {
      * @param meta the database meta data
      * @param tableTypes the table types to read
      */
-    void readTables(DatabaseMetaData meta, String[] tableTypes) throws SQLException {
+    public void readTables(DatabaseMetaData meta, String[] tableTypes) throws SQLException {
         ResultSet rs = meta.getTables(null, name, null, tableTypes);
         ArrayList<DbTableOrView> list = New.arrayList();
         while (rs.next()) {
@@ -117,4 +127,24 @@ public class DbSchema {
         }
     }
 
+    /**
+     * Read all procedures in the dataBase.
+     * @param meta the database meta data
+     * @throws SQLException Error while fetching procedures
+     */
+    public void readProcedures(DatabaseMetaData meta) throws SQLException {
+        ResultSet rs = meta.getProcedures(null, name, null);
+        ArrayList<DbProcedure> list = New.arrayList();
+        while (rs.next()) {
+            list.add(new DbProcedure(this, rs));
+        }
+        rs.close();
+        procedures = new DbProcedure[list.size()];
+        list.toArray(procedures);
+        if (procedures.length < MAX_PROCEDURES_LIST_COLUMNS) {
+            for (DbProcedure procedure : procedures) {
+                procedure.readParameters(meta);
+            }
+        }
+    }
 }

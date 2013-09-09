@@ -173,6 +173,7 @@ public class DbContents {
             String[] tableTypes = { "TABLE", "SYSTEM TABLE", "VIEW", "SYSTEM VIEW",
                     "TABLE LINK", "SYNONYM", "EXTERNAL" };
             schema.readTables(meta, tableTypes);
+            schema.readProcedures(meta);
         }
         if (defaultSchema == null) {
             String best = null;
