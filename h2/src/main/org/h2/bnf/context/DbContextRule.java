@@ -31,8 +31,7 @@ public class DbContextRule implements Rule {
     private final DbContents contents;
     private final int type;
 
-    // Used by Procedure rule to refer to columns parameters
-    private RuleHead columns;
+    private String columnType;
 
     /**
      * BNF terminal rule Constructor
@@ -44,11 +43,16 @@ public class DbContextRule implements Rule {
         this.type = type;
     }
 
+    /**
+     * @param columnType COLUMN Auto completion can be filtered by column type
+     */
+    public void setColumnType(String columnType) {
+        this.columnType = columnType;
+    }
+
     @Override
     public void setLinks(HashMap<String, RuleHead> ruleMap) {
-        if(type == PROCEDURE) {
-            columns = ruleMap.get("column_name");
-        }
+        // nothing to do
     }
 
     @Override
@@ -157,7 +161,7 @@ public class DbContextRule implements Rule {
                         name = column.getQuotedName();
                         compare = query;
                     }
-                    if (compare.startsWith(name)) {
+                    if (compare.startsWith(name) && (columnType == null || column.getDataType().contains(columnType))) {
                         String b = s.substring(name.length());
                         if (best == null || b.length() < best.length()) {
                             best = b;
@@ -179,14 +183,16 @@ public class DbContextRule implements Rule {
                     }
                     for (DbColumn column : table.getColumns()) {
                         String name = StringUtils.toUpperEnglish(column.getName());
-                        if (up.startsWith(name)) {
-                            String b = s.substring(name.length());
-                            if (best == null || b.length() < best.length()) {
-                                best = b;
-                            }
-                        } else if (s.length() == 0 || name.startsWith(up)) {
-                            if (s.length() < name.length()) {
-                                sentence.add(column.getName(), column.getName().substring(s.length()), Sentence.CONTEXT);
+                        if(columnType == null || column.getDataType().contains(columnType)) {
+                            if (up.startsWith(name)) {
+                                String b = s.substring(name.length());
+                                if (best == null || b.length() < best.length()) {
+                                    best = b;
+                                }
+                            } else if (s.length() == 0 || name.startsWith(up)) {
+                                if (s.length() < name.length()) {
+                                    sentence.add(column.getName(), column.getName().substring(s.length()), Sentence.CONTEXT);
+                                }
                             }
                         }
                     }
@@ -240,7 +246,14 @@ public class DbContextRule implements Rule {
                         if(parameter.getPosition() > 1) {
                             rl = new RuleList(rl, comma, false);
                         }
-                        rl = new RuleList(rl, columns.getRule(), false);
+                        DbContextRule columnRule = new DbContextRule(contents, COLUMN);
+                        String parameterType = parameter.getDataType();
+                        // Remove precision
+                        if(parameterType.contains("(")) {
+                            parameterType = parameterType.substring(0, parameterType.indexOf('('));
+                        }
+                        columnRule.setColumnType(parameterType);
+                        rl = new RuleList(rl, columnRule , false);
                     }
                 }
                 rl.autoComplete(sentence);
