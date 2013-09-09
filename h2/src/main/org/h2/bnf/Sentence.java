@@ -36,7 +36,7 @@ public class Sentence {
      */
     public static final int FUNCTION = 2;
 
-    private static final long MAX_PROCESSING_TIME = (long)1e12;
+    private static final long MAX_PROCESSING_TIME = 100;
 
     /**
      * The map of next tokens in the form type#tokenName token.
