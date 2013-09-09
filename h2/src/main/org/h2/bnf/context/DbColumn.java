@@ -22,6 +22,8 @@ public class DbColumn {
 
     private final String dataType;
 
+    private int position;
+
     /**
      * @return The data type name (including precision and the NOT NULL flag if
      * applicable).
@@ -44,11 +46,19 @@ public class DbColumn {
         return quotedName;
     }
 
+    /**
+     * @return Column index
+     */
+    public int getPosition() {
+        return position;
+    }
+
     public DbColumn(DbContents contents, ResultSet rs) throws SQLException {
         name = rs.getString("COLUMN_NAME");
         quotedName = contents.quoteIdentifier(name);
         String type = rs.getString("TYPE_NAME");
         int size = rs.getInt(DbContents.findColumn(rs, "COLUMN_SIZE", 7));
+        position = rs.getInt("ORDINAL_POSITION");
         boolean isSQLite = contents.isSQLite();
         if (size > 0 && !isSQLite) {
             type += "(" + size;

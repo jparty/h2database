@@ -43,7 +43,7 @@ public class DbTableOrView {
      */
     private DbColumn[] columns;
 
-    DbTableOrView(DbSchema schema, ResultSet rs) throws SQLException {
+    public DbTableOrView(DbSchema schema, ResultSet rs) throws SQLException {
         this.schema = schema;
         name = rs.getString("TABLE_NAME");
         String type = rs.getString("TABLE_TYPE");
@@ -91,7 +91,7 @@ public class DbTableOrView {
      *
      * @param meta the database meta data
      */
-    void readColumns(DatabaseMetaData meta) throws SQLException {
+    public void readColumns(DatabaseMetaData meta) throws SQLException {
         ResultSet rs = meta.getColumns(null, schema.name, name, null);
         ArrayList<DbColumn> list = New.arrayList();
         while (rs.next()) {
