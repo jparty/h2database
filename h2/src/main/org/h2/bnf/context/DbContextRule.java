@@ -10,7 +10,9 @@ import java.util.HashMap;
 import java.util.HashSet;
 import org.h2.bnf.BnfVisitor;
 import org.h2.bnf.Rule;
+import org.h2.bnf.RuleElement;
 import org.h2.bnf.RuleHead;
+import org.h2.bnf.RuleList;
 import org.h2.bnf.Sentence;
 import org.h2.command.Parser;
 import org.h2.message.DbException;
@@ -24,10 +26,13 @@ public class DbContextRule implements Rule {
 
     public static final int COLUMN = 0, TABLE = 1, TABLE_ALIAS = 2;
     public static final int NEW_TABLE_ALIAS = 3;
-    public static final int COLUMN_ALIAS = 4, SCHEMA = 5;
+    public static final int COLUMN_ALIAS = 4, SCHEMA = 5, PROCEDURE = 6;
 
     private final DbContents contents;
     private final int type;
+
+    // Used by Procedure rule to refer to columns parameters
+    private RuleHead columns;
 
     /**
      * BNF terminal rule Constructor
@@ -41,7 +46,9 @@ public class DbContextRule implements Rule {
 
     @Override
     public void setLinks(HashMap<String, RuleHead> ruleMap) {
-        // nothing to do
+        if(type == PROCEDURE) {
+            columns = ruleMap.get("column_name");
+        }
     }
 
     @Override
@@ -190,6 +197,9 @@ public class DbContextRule implements Rule {
             }
             break;
         }
+            case PROCEDURE:
+                autoCompleteProcedure(sentence);
+                break;
         default:
             throw DbException.throwInternalError("type=" + type);
         }
@@ -202,7 +212,41 @@ public class DbContextRule implements Rule {
         }
         return false;
     }
+    private void autoCompleteProcedure(Sentence sentence) {
+        DbSchema schema = sentence.getLastMatchedSchema();
+        if (schema == null) {
+            schema = contents.getDefaultSchema();
+        }
+        String incompleteSentence = sentence.getQueryUpper();
+        String incompleteFunctionName = incompleteSentence;
+        if(incompleteSentence.contains("(")) {
+            incompleteFunctionName = incompleteSentence.substring(0, incompleteSentence.indexOf('('));
+        }
 
+        // Common elements
+        RuleElement openBracket = new RuleElement("(", "Function");
+        RuleElement comma = new RuleElement(",", "Function");
+
+        // Fetch all elements
+        for(DbProcedure procedure : schema.getProcedures()) {
+            final String procName = procedure.getName();
+            if(procName.startsWith(incompleteFunctionName)) {
+                // That's it, build a RuleList from this function
+                RuleElement procedureElement = new RuleElement(procName, "Function");
+                RuleList rl = new RuleList(procedureElement, openBracket, false);
+                // Go further only if the user use open bracket
+                if(incompleteSentence.contains("(")) {
+                    for(DbColumn parameter : procedure.getParameters()) {
+                        if(parameter.getPosition() > 1) {
+                            rl = new RuleList(rl, comma, false);
+                        }
+                        rl = new RuleList(rl, columns.getRule(), false);
+                    }
+                }
+                rl.autoComplete(sentence);
+            }
+        }
+    }
     private static String autoCompleteTableAlias(Sentence sentence, boolean newAlias) {
         String s = sentence.getQuery();
         String up = sentence.getQueryUpper();

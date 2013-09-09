@@ -57,7 +57,14 @@ public class DbColumn {
         name = rs.getString("COLUMN_NAME");
         quotedName = contents.quoteIdentifier(name);
         String type = rs.getString("TYPE_NAME");
-        int size = rs.getInt(DbContents.findColumn(rs, "COLUMN_SIZE", 7));
+        // A procedures column size is identified by PRECISION, for table this is COLUMN_SIZE
+        int precisionColumnIndex = DbContents.findColumn(rs, "PRECISION", 0);
+        int size;
+        if( precisionColumnIndex == 0 ){
+            size = rs.getInt(DbContents.findColumn(rs, "COLUMN_SIZE", 7));
+        } else {
+            size = rs.getInt(precisionColumnIndex);
+        }
         position = rs.getInt("ORDINAL_POSITION");
         boolean isSQLite = contents.isSQLite();
         if (size > 0 && !isSQLite) {
