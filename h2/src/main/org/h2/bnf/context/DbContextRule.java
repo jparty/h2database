@@ -226,11 +226,12 @@ public class DbContextRule implements Rule {
         String incompleteSentence = sentence.getQueryUpper();
         String incompleteFunctionName = incompleteSentence;
         if(incompleteSentence.contains("(")) {
-            incompleteFunctionName = incompleteSentence.substring(0, incompleteSentence.indexOf('('));
+            incompleteFunctionName = incompleteSentence.substring(0, incompleteSentence.indexOf('(')).trim();
         }
 
         // Common elements
         RuleElement openBracket = new RuleElement("(", "Function");
+        RuleElement closeBracket = new RuleElement(")", "Function");
         RuleElement comma = new RuleElement(",", "Function");
 
         // Fetch all elements
@@ -255,6 +256,7 @@ public class DbContextRule implements Rule {
                         columnRule.setColumnType(parameterType);
                         rl = new RuleList(rl, columnRule , false);
                     }
+                    rl = new RuleList(rl, closeBracket , false);
                 }
                 rl.autoComplete(sentence);
             }
