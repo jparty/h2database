@@ -14,8 +14,6 @@ import org.h2.bnf.context.DbSchema;
 import org.h2.test.TestBase;
 
 import java.sql.Connection;
-import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -75,5 +73,14 @@ public class TestBnf extends TestBase {
         tokens = bnf.getNextTokenList("SELECT CUSTOM_PRINT(");
         assertTrue(tokens.values().contains("STRING_FIELD"));
         assertFalse(tokens.values().contains("INT_FIELD"));
+
+        // Test parameters with spaces
+        tokens = bnf.getNextTokenList("SELECT CUSTOM_PRINT ( ");
+        assertTrue(tokens.values().contains("STRING_FIELD"));
+        assertFalse(tokens.values().contains("INT_FIELD"));
+
+        // Test parameters with close bracket
+        tokens = bnf.getNextTokenList("SELECT CUSTOM_PRINT ( STRING_FIELD");
+        assertTrue(tokens.values().contains(")"));
     }
 }
