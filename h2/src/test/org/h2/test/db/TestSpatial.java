@@ -63,6 +63,7 @@ public class TestSpatial extends TestBase {
             testGeometryDataType();
             testWKB();
             testValueConversion();
+            testEquals();
             deleteDb("spatial");
         }
     }
@@ -451,7 +452,7 @@ public class TestSpatial extends TestBase {
      *
      * @param seed the random seed
      * @param rowCount the number of rows
-     * @param minX the smallest x
+     * @param minX the smallest x            testEquals()
      * @param maxX the largest x
      * @param minY the smallest y
      * @param maxY the largest y
@@ -549,10 +550,32 @@ public class TestSpatial extends TestBase {
             conn.close();
         }
         deleteDb("getObjectString");
-
     }
 
     public static String getObjectString(Object object) {
         return object.toString();
+    }
+
+    /**
+     * Test equality method on ValueGeometry
+     */
+    public void testEquals() {
+        // 3d equality test
+        ValueGeometry geom3d = ValueGeometry.get("POLYGON ((67 13 6, 67 18 5, 59 18 4, 59 13 6,  67 13 6))");
+        ValueGeometry geom2d = ValueGeometry.get("POLYGON ((67 13, 67 18, 59 18, 59 13,  67 13))");
+        assertFalse(geom3d.equals(geom2d));
+        // SRID equality test
+        GeometryFactory geometryFactory = new GeometryFactory();
+        Geometry geometry = geometryFactory.createPoint(new Coordinate(0, 0));
+        geometry.setSRID(27572);
+        ValueGeometry valueGeometry = ValueGeometry.getFromGeometry(geometry);
+        Geometry geometry2 = geometryFactory.createPoint(new Coordinate(0, 0));
+        geometry2.setSRID(5326);
+        ValueGeometry valueGeometry2 = ValueGeometry.getFromGeometry(geometry2);
+        assertFalse(valueGeometry.equals(valueGeometry2));
+        // Check illegal geometry (no WKB representation)
+        ValueGeometry emptyPoint = ValueGeometry.get("POINT EMPTY");
+        ValueGeometry emptyPoint2 = ValueGeometry.get("POINT EMPTY");
+        assertTrue(emptyPoint.equals(emptyPoint2));
     }
 }
