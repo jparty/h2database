@@ -452,7 +452,7 @@ public class TestSpatial extends TestBase {
      *
      * @param seed the random seed
      * @param rowCount the number of rows
-     * @param minX the smallest x            testEquals()
+     * @param minX the smallest x
      * @param maxX the largest x
      * @param minY the smallest y
      * @param maxY the largest y
