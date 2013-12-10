@@ -79,11 +79,11 @@ public class TestSpatial extends TestBase {
         assertEquals(1, rs.getInt(1));
         assertEquals("POLYGON ((1 1, 1 2, 2 2, 1 1))", rs.getString(2));
         GeometryFactory f = new GeometryFactory();
-        Polygon polygon = f.createPolygon(new Coordinate[] {
+        Polygon polygon = f.createPolygon(f.createLinearRing(new Coordinate[] {
                 new Coordinate(1, 1),
                 new Coordinate(1, 2),
                 new Coordinate(2, 2),
-                new Coordinate(1, 1) });
+                new Coordinate(1, 1) }), null);
         assertTrue(polygon.equals(rs.getObject(2)));
 
         rs = stat.executeQuery("select * from test where polygon = 'POLYGON ((1 1, 1 2, 2 2, 1 1))'");

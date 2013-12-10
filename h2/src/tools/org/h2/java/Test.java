@@ -9,12 +9,12 @@ package org.h2.java;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
-import org.h2.test.TestBase;
+//import org.h2.test.TestBase;
 
 /**
  * A test for the Java parser.
  */
-public class Test extends TestBase {
+public class Test /*extends TestBase*/ {
 
     /**
      * Start the task with the given arguments.
@@ -49,7 +49,7 @@ public class Test extends TestBase {
         // Identifier : (labels)
         // ClassOrInterfaceDeclaration within blocks (or any other nested classes)
         // assert
-
+        /*
         assertEquals("\\\\" + "u0000", JavaParser.replaceUnicode("\\\\" + "u0000"));
         assertEquals("\u0000", JavaParser.replaceUnicode("\\" + "u0000"));
         assertEquals("\u0000", JavaParser.replaceUnicode("\\" + "uu0000"));
@@ -64,7 +64,7 @@ public class Test extends TestBase {
         assertEquals("2.f", JavaParser.readNumber("2.fx"));
         assertEquals(".3d", JavaParser.readNumber(".3dx"));
         assertEquals("6.022137e+23f", JavaParser.readNumber("6.022137e+23f+1"));
-
+        */
         JavaParser parser = new JavaParser();
         parser.parse("src/tools/org/h2", "java.lang.Object");
         parser.parse("src/tools/org/h2", "java.lang.String");

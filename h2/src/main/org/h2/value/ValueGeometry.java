@@ -220,7 +220,7 @@ public class ValueGeometry extends Value {
     private static byte[] toWKB(Geometry geometry) {
         int dimensionCount = getDimensionCount(geometry);
         boolean includeSRID = geometry.getSRID() != 0;
-        WKBWriter writer = new WKBWriter(dimensionCount, includeSRID);
+        WKBWriter writer = new WKBWriter(dimensionCount);
         return writer.write(geometry);
     }
 

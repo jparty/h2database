@@ -23,7 +23,9 @@ package org.h2.jdbcx;
 import java.io.PrintWriter;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.sql.SQLFeatureNotSupportedException;
 import java.util.ArrayList;
+import java.util.logging.Logger;
 import javax.sql.ConnectionEvent;
 import javax.sql.ConnectionEventListener;
 import javax.sql.ConnectionPoolDataSource;
@@ -328,6 +330,11 @@ public class JdbcConnectionPool implements DataSource, ConnectionEventListener {
     @Override
     public boolean isWrapperFor(Class<?> iface) throws SQLException {
         throw DbException.getUnsupportedException("isWrapperFor");
+    }
+
+    @Override
+    public Logger getParentLogger() throws SQLFeatureNotSupportedException {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     /**

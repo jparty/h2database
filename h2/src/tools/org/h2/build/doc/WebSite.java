@@ -12,7 +12,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.HashMap;
 
-import org.h2.samples.Newsfeed;
+//import org.h2.samples.Newsfeed;
 import org.h2.util.IOUtils;
 import org.h2.util.StringUtils;
 
@@ -53,7 +53,7 @@ public class WebSite {
         deleteRecursive(new File(WEB_DIR));
         loadFragments();
         copy(new File(SOURCE_DIR), new File(WEB_DIR), true, true);
-        Newsfeed.main(WEB_DIR + "/html");
+        //Newsfeed.main(WEB_DIR + "/html");
 
         // create the internal documentation
         copy(new File(SOURCE_DIR), new File(SOURCE_DIR), true, false);
